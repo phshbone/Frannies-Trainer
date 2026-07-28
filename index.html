@@ -146,6 +146,14 @@ textarea{min-height:90px;resize:vertical}
 .timeline-type{font-size:.67rem;text-transform:uppercase;letter-spacing:.06em;font-weight:950;color:var(--pink3)}.timeline-date{font-size:.74rem;color:#806d73;margin-top:2px}
 @media(min-width:760px){.care-grid{grid-template-columns:1fr 1fr}.care-section.full{grid-column:1/-1}}
 
+
+.save-confirm{margin-top:10px;padding:10px 12px;border-radius:12px;background:#e3ece5;color:#3f5d48;border:1px solid #bfd1c3;font-weight:900}
+html,body{overscroll-behavior-y:none}
+.app{padding-bottom:118px}
+.bottom-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100%!important;max-width:none!important;border-radius:18px 18px 0 0!important;padding:8px 8px calc(8px + env(safe-area-inset-bottom))!important;min-height:82px;margin:0!important}
+.quick-log-entry{margin-top:15px;padding:14px;border:1px solid var(--line);background:#fffaf7;border-radius:16px}
+.print-only{display:none}
+@media print{body{background:white!important}body:before,.app,.bottom-nav,.modal,.splash{display:none!important}.print-only{display:block!important;color:#222;font-family:Arial,sans-serif;padding:24px}.print-only article{border-bottom:1px solid #ccc;padding:10px 0}.print-only h1{font-size:28px;line-height:1.1}.print-only .type{text-transform:uppercase;font-size:10px;font-weight:bold;letter-spacing:.08em;color:#7e4f5b}.print-only .date{font-size:11px;color:#666}}
 </style>
 </head>
 <body>
@@ -182,7 +190,7 @@ textarea{min-height:90px;resize:vertical}
 <div><label>Size</label><select id="dogSize"><option>Small</option><option selected>Medium</option><option>Large</option><option>Mountain creature</option></select></div>
 </div>
 <div style="margin-top:10px"><label>Frannie’s human</label><input value="Mollie" disabled style="opacity:.82"></div><div style="margin-top:10px"><label>Main goal</label><input id="mainGoal" value="Calmer behavior and better listening"></div>
-<div class="actions"><button class="primary" onclick="saveProfile()">Save profile</button></div>
+<div class="actions"><button class="primary" onclick="saveProfile()">Save profile</button></div><div id="profileSaved" class="save-confirm hidden" role="status">✓ Frannie’s profile has been saved.</div>
 </div>
 <div class="card">
 <h2>Foundation progress</h2>
@@ -197,7 +205,7 @@ textarea{min-height:90px;resize:vertical}
 <div class="problem-grid" id="problemGrid"></div>
 <div id="focusSummary" class="focus-summary">No focus areas selected yet.</div>
 <div class="actions">
-  <button id="buildPlanBtn" class="primary" onclick="buildSelectedPlan()" disabled>Build Frannie’s plan</button>
+  <button id="buildPlanBtn" class="primary" onclick="buildSelectedPlan()" disabled>Show Frannie’s focus plan</button>
   <button class="secondary" onclick="clearFocusAreas()">Clear selections</button>
 </div>
 </div>
@@ -209,7 +217,7 @@ textarea{min-height:90px;resize:vertical}
 </section>
 
 <section id="plan" class="screen">
-<div class="card" style="margin-top:16px"><h2>Good Girl program</h2><p>Lessons unlock in order. Repeating one is part of training, not failure.</p><div class="module-list" id="moduleList"></div></div>
+<div class="card" style="margin-top:16px"><h2>Good Girl program</h2><div id="planFocusBanner" class="focus-summary hidden"></div><p>Foundation lessons stay in order because later behavior work depends on the earlier skills. Frannie’s selected problem areas are marked <strong>Recommended</strong>, so Mollie can see where the plan is heading.</p><div class="module-list" id="moduleList"></div></div>
 </section>
 
 <section id="lesson" class="screen">
@@ -246,7 +254,9 @@ textarea{min-height:90px;resize:vertical}
     </div>
     <span class="pill">Everything in one place</span>
   </div>
-  <p>Training and care entries appear here automatically. Mollie only enters information once.</p>
+  <p>Training entries come from completed lessons. Vaccinations, treatments, feeding, allergies, weight, and care notes come from the <strong>Care</strong> page. Mollie enters information once, and it appears here automatically.</p>
+<div class="actions"><button class="primary" onclick="showScreen('care')">Add care information</button><button class="secondary" onclick="showScreen('plan')">Open training plan</button></div>
+<div class="quick-log-entry"><h3>Quick log note</h3><div class="row-2"><div><label>Date</label><input id="quickLogDate" type="date"></div><div><label>Title</label><input id="quickLogTitle" placeholder="e.g. New behavior noticed"></div></div><div style="margin-top:9px"><label>Note</label><textarea id="quickLogText" placeholder="Add anything Mollie wants in Frannie Log."></textarea></div><div class="actions"><button class="primary" onclick="addQuickLogNote()">Add to Frannie Log</button></div><div id="quickLogSaved" class="save-confirm hidden">✓ Added to Frannie Log.</div></div>
 
   <div class="timeline-filter" id="mainLogFilters">
     <button class="active" onclick="setMainLogFilter('all',this)">All</button>
@@ -262,11 +272,11 @@ textarea{min-height:90px;resize:vertical}
 
   <div class="care-section" style="margin-top:16px">
     <h3>Save, restore, or print</h3>
-    <p class="disclaimer">A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe.</p>
+    <p class="disclaimer">A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe. On iPhone, the print screen can also be expanded and shared as a PDF.</p>
     <div class="actions">
       <button class="primary" onclick="downloadBackup()">Save backup</button>
       <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore backup</button>
-      <button class="secondary" onclick="printFrannieLog()">Print / Save PDF</button>
+      <button class="secondary" onclick="printFrannieLog()">Print / PDF options</button>
       <input id="restoreFile" type="file" accept=".json,application/json" class="hidden" onchange="restoreBackup(event)">
     </div>
   </div>
@@ -382,6 +392,11 @@ function updateFocusSummary(){
 }
 function buildSelectedPlan(){
   renderModules();
+  const banner=document.getElementById("planFocusBanner");
+  if(state.selected.length){
+    banner.textContent="Frannie’s current focus: "+state.selected.join(", ")+". Start with the first available foundation lesson; matching lessons are marked Recommended.";
+    banner.classList.remove("hidden");
+  }else banner.classList.add("hidden");
   showScreen("plan");
 }
 function clearFocusAreas(){
@@ -390,7 +405,15 @@ function clearFocusAreas(){
   renderProblems();
   renderModules();
 }
-function saveProfile(){state.profile={name:dogName.value,age:dogAge.value,size:dogSize.value,goal:mainGoal.value};save();heroStatus.textContent="Profile saved. Good girl operations may begin."}
+function saveProfile(){
+  state.profile={name:dogName.value,age:dogAge.value,size:dogSize.value,goal:mainGoal.value};
+  save();
+  heroStatus.textContent="Profile saved. Good girl operations may begin.";
+  const msg=document.getElementById("profileSaved");
+  msg.classList.remove("hidden");
+  clearTimeout(window.profileSavedTimer);
+  window.profileSavedTimer=setTimeout(()=>msg.classList.add("hidden"),3200);
+}
 function loadProfile(){if(state.profile){dogName.value=state.profile.name||"Frannie";dogAge.value=state.profile.age||"";dogSize.value=state.profile.size||"Medium";mainGoal.value=state.profile.goal||""}}
 function renderModules(){
   moduleList.innerHTML="";
@@ -464,6 +487,14 @@ function renderCare(){renderTreatments();renderFeeding();renderAllergies();rende
 
 
 let mainLogFilter="all";
+function addQuickLogNote(){
+  const title=quickLogTitle.value.trim(),note=quickLogText.value.trim();
+  if(!title&&!note){alert("Add a title or note.");return}
+  state.careNotes.unshift({id:Date.now(),date:quickLogDate.value||todayISO(),title:title||"General log note",note});
+  quickLogTitle.value="";quickLogText.value="";quickLogDate.value=todayISO();
+  save();renderCare();renderMainLog();
+  const msg=document.getElementById("quickLogSaved");msg.classList.remove("hidden");setTimeout(()=>msg.classList.add("hidden"),2600);
+}
 
 function allFrannieEntries(){
   const entries=[];
@@ -592,36 +623,14 @@ function restoreBackup(event){
 function printFrannieLog(){
   const entries=allFrannieEntries();
   const profile=state.profile||{};
-  const rows=entries.length?entries.map(x=>`
-    <article>
-      <div class="type">${esc(x.type)}</div>
-      <h3>${esc(x.title)}</h3>
-      <div class="date">${esc(x.date||"No date")}</div>
-      ${x.detail?`<p>${esc(x.detail)}</p>`:""}
-    </article>`).join(""):"<p>No entries yet.</p>";
-
-  const w=window.open("","_blank");
-  if(!w){alert("Allow pop-ups to print Frannie’s log.");return}
-  w.document.write(`<!doctype html><html><head><title>Frannie Log</title>
-    <style>
-      body{font-family:Arial,sans-serif;color:#2b2225;margin:32px;line-height:1.4}
-      h1{margin-bottom:3px}.sub{color:#6d5d63;margin-bottom:24px}
-      article{border-bottom:1px solid #ddd;padding:12px 0}
-      article h3{margin:3px 0}.type{text-transform:uppercase;font-size:11px;font-weight:bold;color:#7e4f5b;letter-spacing:.08em}
-      .date{font-size:12px;color:#777}p{margin:5px 0}
-      @media print{body{margin:.45in}}
-    </style></head><body>
-    <h1>Frannie Log</h1>
-    <div class="sub">Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</div>
-    ${rows}
-    </body></html>`);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>w.print(),250);
+  const rows=entries.length?entries.map(x=>`<article><div class="type">${esc(x.type)}</div><h3>${esc(x.title)}</h3><div class="date">${esc(x.date||"No date")}</div>${x.detail?`<p>${esc(x.detail)}</p>`:""}</article>`).join(""):"<p>No entries yet.</p>";
+  const report=document.getElementById("printReport");
+  report.innerHTML=`<h1>Frannie Log</h1><p>Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}`;
+  setTimeout(()=>window.print(),100);
 }
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
-loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();if(!treatmentDate.value)treatmentDate.value=todayISO();if(!weightDate.value)weightDate.value=todayISO();if(!careNoteDate.value)careNoteDate.value=todayISO();
+loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();if(!treatmentDate.value)treatmentDate.value=todayISO();if(!weightDate.value)weightDate.value=todayISO();if(!careNoteDate.value)careNoteDate.value=todayISO();if(document.getElementById("quickLogDate")&&!quickLogDate.value)quickLogDate.value=todayISO();
 </script>
-</body>
+<section id="printReport" class="print-only"></section></body>
 </html>

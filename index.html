@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Frannie’s a Good Girl">
 <title>Frannie’s a Good Girl</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap');
 :root {
   --ink:#251d20; --cream:#fff8f2; --paper:rgba(255,248,242,.94);
   --pink:#c58d9b; --pink2:#e5bbc5; --pink3:#7e4f5b;
@@ -27,13 +27,13 @@ button{cursor:pointer}
 .app{position:relative;z-index:1;max-width:980px;margin:auto;padding:16px 14px 104px}
 .hero{background:linear-gradient(145deg,rgba(26,22,24,.95),rgba(66,42,47,.91));color:white;border:1px solid rgba(255,255,255,.15);border-radius:28px;padding:24px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
 .eyebrow{font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;font-weight:900;color:var(--pink2)}
-h1{font-family:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif;font-size:clamp(2.4rem,10vw,5rem);line-height:.9;letter-spacing:-.055em;margin:.45rem 0 .8rem}
+h1{font-family:"Comfortaa","Arial Rounded MT Bold",system-ui,sans-serif;font-weight:700;font-size:clamp(2.4rem,10vw,5rem);line-height:.9;letter-spacing:-.055em;margin:.45rem 0 .8rem}
 .hero p{max-width:650px;color:#f2e8e9;line-height:1.5;margin:0}
 .status{display:inline-flex;margin-top:14px;padding:8px 11px;border-radius:999px;background:rgba(197,141,155,.18);border:1px solid rgba(229,187,197,.35);font-size:.8rem;font-weight:800}
 .screen{display:none} .screen.active{display:block}
 .grid{display:grid;gap:16px;margin-top:16px} .two{grid-template-columns:1fr}
 .card{background:var(--paper);border:1px solid rgba(255,255,255,.45);border-radius:22px;padding:18px;box-shadow:0 10px 28px rgba(0,0,0,.2);backdrop-filter:blur(9px)}
-.card h2,.card h3{font-family:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif;margin:0 0 9px} .card p{color:#66575c;line-height:1.5}
+.card h2,.card h3{font-family:"Comfortaa","Arial Rounded MT Bold",system-ui,sans-serif;font-weight:700;margin:0 0 9px} .card p{color:#66575c;line-height:1.5}
 label{display:block;font-size:.77rem;font-weight:900;color:#66545a;margin-bottom:5px}
 input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fffdfb;color:var(--ink)}
 textarea{min-height:90px;resize:vertical}
@@ -51,7 +51,7 @@ textarea{min-height:90px;resize:vertical}
 .module{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:15px;background:#fffaf7}
 .module.locked{opacity:.5} .module.done .num{background:var(--pink3);color:white}
 .num{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#efdde2;color:var(--pink3);font-weight:950}
-.module-title{font-family:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif;font-weight:900} .module-sub{font-size:.78rem;color:#78666c;margin-top:2px}
+.module-title{font-family:"Comfortaa","Arial Rounded MT Bold",system-ui,sans-serif;font-weight:900} .module-sub{font-size:.78rem;color:#78666c;margin-top:2px}
 .lesson-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .pill{font-size:.67rem;text-transform:uppercase;letter-spacing:.07em;font-weight:950;padding:6px 8px;border-radius:999px;background:#eddce1;color:#704753;white-space:nowrap}
 .steps{counter-reset:s;margin:14px 0 0;padding:0;display:grid;gap:9px}
@@ -104,8 +104,9 @@ textarea{min-height:90px;resize:vertical}
 .splash-photo img{width:100%;height:100%;object-fit:cover;display:none}
 .splash-paw{font-size:4.4rem}
 .splash h2{
-  font-family:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif;
-  font-size:2.3rem;line-height:.95;margin:0;color:#fff4f6;
+  font-family:"Comfortaa","Arial Rounded MT Bold",system-ui,sans-serif;
+  font-weight:700;
+  font-size:2.15rem;line-height:.95;margin:0;color:#fff4f6;
 }
 .splash p{margin:10px 0 18px;color:#eadde1}
 .splash button{border:0;border-radius:999px;padding:12px 20px;background:var(--pink2);color:#342329;font-weight:950}
@@ -144,7 +145,7 @@ textarea{min-height:90px;resize:vertical}
       <div class="splash-paw" id="splashPaw">🐾</div>
     </div>
     <div class="eyebrow">Frannie and her human, Mollie</div>
-    <h2>Frannie’s a<br>Good Girl</h2>
+    <h2>Frannie’s<br>a Good Girl</h2>
     <p>A little practice, a little patience, and possibly a few treats.</p>
     <button onclick="dismissSplash()">Let’s begin</button>
   </div>
@@ -153,7 +154,7 @@ textarea{min-height:90px;resize:vertical}
 <div class="app">
 <header class="hero">
 <div class="eyebrow">A private step-by-step training guide</div>
-<h1>Frannie’s<br>Good Girl</h1>
+<h1>Frannie’s<br>a Good Girl</h1>
 <p>Clear practice sessions for Frannie and Frannie’s human, Mollie. Written lessons work on their own; official Cesar Millan videos are optional visual companions.</p>
 <div class="status" id="heroStatus">Day 1: good girl status pending</div>
 </header>

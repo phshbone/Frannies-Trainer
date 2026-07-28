@@ -43,7 +43,7 @@ textarea{min-height:90px;resize:vertical}
 .problem.active{background:#f1dce1;border-color:var(--pink);color:#603b45}
 .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
 .primary,.secondary,.danger,.ghost{border:0;border-radius:12px;padding:11px 14px;font-weight:900}
-.primary{background:var(--pink3);color:white} .secondary{background:#ead8dc;color:#513b42}
+.primary{background:var(--pink3);color:white}.primary:disabled{opacity:.45;cursor:not-allowed} .secondary{background:#ead8dc;color:#513b42}
 .danger{background:#f0d9d6;color:var(--danger)} .ghost{background:#f4ece8;color:#57474b}
 .progress-shell{height:11px;background:#e8dadd;border-radius:999px;overflow:hidden}
 .progress{height:100%;background:linear-gradient(90deg,var(--pink3),var(--pink),var(--tan));width:0;transition:.3s}
@@ -110,6 +110,29 @@ textarea{min-height:90px;resize:vertical}
 .splash p{margin:10px 0 18px;color:#eadde1}
 .splash button{border:0;border-radius:999px;padding:12px 20px;background:var(--pink2);color:#342329;font-weight:950}
 
+
+.focus-summary{
+  margin-top:12px;padding:11px 13px;border-radius:13px;
+  background:#f5e8ec;border:1px solid var(--line);
+  color:#634b53;font-weight:800;line-height:1.4;
+}
+.recommended{
+  display:inline-block;margin-top:5px;padding:4px 7px;border-radius:999px;
+  background:#efdce2;color:#704753;font-size:.66rem;
+  text-transform:uppercase;letter-spacing:.06em;font-weight:950;
+}
+.bottom-nav{
+  min-height:78px;
+  padding:9px 8px 10px;
+  align-items:stretch;
+}
+.nav{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;min-height:58px;padding:7px 4px;
+}
+.nav svg{width:24px;height:24px;display:block}
+.nav span{display:block;line-height:1}
+
 </style>
 </head>
 <body>
@@ -159,6 +182,11 @@ textarea{min-height:90px;resize:vertical}
 <h2>What are we working on?</h2>
 <p>Select Frannie’s current specialties. These choices are saved on this device.</p>
 <div class="problem-grid" id="problemGrid"></div>
+<div id="focusSummary" class="focus-summary">No focus areas selected yet.</div>
+<div class="actions">
+  <button id="buildPlanBtn" class="primary" onclick="buildSelectedPlan()" disabled>Build Frannie’s plan</button>
+  <button class="secondary" onclick="clearFocusAreas()">Clear selections</button>
+</div>
 </div>
 <div class="card" style="margin-top:16px">
 <h3>How this prototype uses Cesar’s teaching</h3>
@@ -202,6 +230,8 @@ textarea{min-height:90px;resize:vertical}
 <h2>Safety boundary</h2>
 <div class="warning">Stop self-guided practice for biting, attempted biting, redirected aggression, severe resource guarding, panic, or behavior your niece cannot physically control safely.</div>
 <p>Use gates, closed doors, distance, leashes, and other management rather than deliberately provoking Frannie. Serious aggression or fear should be addressed with a veterinarian, veterinary behaviorist, or qualified reward-based behavior professional.</p>
+<h3>Biting and nipping</h3>
+<p>For playful or overexcited nipping, Mollie should end access to hands and clothing, redirect Frannie to an appropriate toy, reward calm mouth behavior, and avoid rough hand play. For hard bites, repeated snapping, guarding-related bites, or bites that break skin, skip self-guided practice and seek qualified professional help.</p>
 <h3>Stop the session when</h3>
 <ul><li>Frannie becomes rigid, stares, snarls, snaps, or repeatedly lunges.</li><li>She cannot look away from the trigger or recover at the current distance.</li><li>She refuses food she normally values.</li><li>Your niece feels frightened or cannot maintain control.</li></ul>
 </div>
@@ -211,10 +241,38 @@ textarea{min-height:90px;resize:vertical}
 </div>
 
 <nav class="bottom-nav">
-<button class="nav active" onclick="showScreen('home',this)">Home</button>
-<button class="nav" onclick="showScreen('plan',this)">Plan</button>
-<button class="nav" onclick="showScreen('log',this)">Log</button>
-<button class="nav" onclick="showScreen('safety',this)">Safety</button>
+<button class="nav active" onclick="showScreen('home',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
+<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="32" cy="42" rx="14" ry="11"/>
+<ellipse cx="16" cy="26" rx="6" ry="8"/>
+<ellipse cx="28" cy="18" rx="6" ry="8"/>
+<ellipse cx="40" cy="18" rx="6" ry="8"/>
+<ellipse cx="50" cy="28" rx="6" ry="8"/>
+</g></svg><span>Home</span></button>
+<button class="nav" onclick="showScreen('plan',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
+<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="32" cy="42" rx="14" ry="11"/>
+<ellipse cx="16" cy="26" rx="6" ry="8"/>
+<ellipse cx="28" cy="18" rx="6" ry="8"/>
+<ellipse cx="40" cy="18" rx="6" ry="8"/>
+<ellipse cx="50" cy="28" rx="6" ry="8"/>
+</g></svg><span>Plan</span></button>
+<button class="nav" onclick="showScreen('log',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
+<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="32" cy="42" rx="14" ry="11"/>
+<ellipse cx="16" cy="26" rx="6" ry="8"/>
+<ellipse cx="28" cy="18" rx="6" ry="8"/>
+<ellipse cx="40" cy="18" rx="6" ry="8"/>
+<ellipse cx="50" cy="28" rx="6" ry="8"/>
+</g></svg><span>Log</span></button>
+<button class="nav" onclick="showScreen('safety',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
+<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="32" cy="42" rx="14" ry="11"/>
+<ellipse cx="16" cy="26" rx="6" ry="8"/>
+<ellipse cx="28" cy="18" rx="6" ry="8"/>
+<ellipse cx="40" cy="18" rx="6" ry="8"/>
+<ellipse cx="50" cy="28" rx="6" ry="8"/>
+</g></svg><span>Safety</span></button>
 </nav>
 
 <div class="modal" id="videoModal" onclick="modalBackdrop(event)">
@@ -225,7 +283,7 @@ textarea{min-height:90px;resize:vertical}
 </div></div>
 
 <script>
-const problems=["Leash pulling","Door chaos","Jumping on people","Barking","Ignoring cues","Dog reactivity","Visitor behavior","Resource guarding","Separation distress"];
+const problems=["Leash pulling","Door chaos","Jumping on people","Barking","Biting / nipping","Ignoring cues","Dog reactivity","Visitor behavior","Resource guarding","Separation distress"];
 const lessons=[
 {title:"Calm starts with Mollie",sub:"Observation, timing and a predictable beginning",intro:"This first practice teaches Frannie that quiet behavior makes the session begin. Frannie’s human, Mollie, practices slowing down, watching body language and rewarding recovery.",steps:["Prepare small treats and choose a quiet room before showing the leash.","Stand normally and avoid repeating commands. Watch for four paws down, a softer body, a glance toward Mollie, or a voluntary sit.","Mark the calmer behavior with “yes” and give one treat.","Briefly show the leash. If excitement spikes, lower or hide it and wait for recovery.","Repeat five to eight times, then finish while Frannie is still successful."],tip:"Cesar emphasizes Mollie’s calm state. This exercise turns that theme into observable, rewardable behavior instead of trying to overpower excitement.",minutes:5,videoId:"-zabW8ceZco",videoTitle:"How Do You Tell a Dog You're Calm?",videoNote:"Optional official Cesar Millan demonstration about calmness and the relationship between handler state and dog behavior."},
 {title:"The doorway is not a starting pistol",sub:"Pause, leash slack and calm access outdoors",intro:"Frannie learns that surging pauses the trip and calmer behavior makes the next part of the doorway routine happen.",steps:["Clip on the leash several feet from the door.","Approach the door. If Frannie surges, stop without jerking the leash.","Wait for leash slack or a check-in, mark it, and reward.","Touch the doorknob. Reward if she remains composed; step back if she erupts.","Open the door only an inch at first. Close it, reward recovery, and finish after three good repetitions."],tip:"Leadership here means controlling access to the environment and remaining consistent. Pulling does not move the trip forward; calmness does.",minutes:6,videoId:"aHYBkpFRAZM",videoTitle:"Tips To Manage Your Dog's Excitement When Going Outdoors",videoNote:"Optional official video about focus and overexcitement in outdoor environments."},
@@ -234,6 +292,18 @@ const lessons=[
 {title:"Visitors without a coup attempt",sub:"Mat training, distance and controlled greetings",intro:"Frannie first learns where to go before any real visitor is used as part of training.",steps:["Choose a mat or bed away from the entrance.","Reward Frannie for stepping onto it, then for staying briefly.","Use a soft knock or low-volume door sound and immediately feed several treats on the mat.","Stop before barking escalates. Lower the sound or increase distance if needed.","During a real visit, use a gate, leash, separate room, or closed door instead of forcing a greeting.","Allow interaction only when both dog and visitor are comfortable."],tip:"Planning the environment is a form of leadership. Preventing rehearsal of doorway chaos is more useful than confronting Frannie after she is already overwhelmed.",warning:"Do not use an unsuspecting visitor as a training test if Frannie lunges, snaps, bites, or cannot recover.",minutes:8,videoId:"aJjF9hVOgkY",videoTitle:"How To Correctly Greet A Dog",videoNote:"Optional official demonstration emphasizing calm greetings and rewarding appropriate behavior."},
 {title:"See the trigger, keep the brain",sub:"Distance-based reactivity foundation",intro:"Frannie practices noticing another dog or trigger from far enough away that she can still eat, turn, and respond.",steps:["Begin at a distance where Frannie notices the trigger but is not lunging or barking.","The moment she sees it, mark and feed several treats.","Move farther away if her body stiffens or she stops responding.","Keep the session very short and avoid head-on approaches.","End after a few successful observations, before she becomes exhausted or reactive.","Do not reduce distance until several sessions are consistently calm."],tip:"The written plan prioritizes distance and emotional regulation. The accompanying Cesar video is for observation only; do not copy high-risk handling with a reactive dog.",warning:"For lunging, snapping, biting, redirected aggression, or a dog too strong to control, use management and qualified professional help.",minutes:6,videoId:"XpDuNyyt0ko",videoTitle:"How To Stop Your Dog From Lunging At Other Dogs",videoNote:"Optional official Dog Nation episode. Watch as a visual reference; follow the app’s distance and safety rules for Frannie."}
 ];
+const focusLessonMap={
+  "Leash pulling":[1,2],
+  "Door chaos":[1,4],
+  "Jumping on people":[3,4],
+  "Barking":[4,5],
+  "Biting / nipping":[0,3,4],
+  "Ignoring cues":[0,3],
+  "Dog reactivity":[5],
+  "Visitor behavior":[4],
+  "Resource guarding":[0],
+  "Separation distress":[0]
+};
 
 let state=JSON.parse(localStorage.getItem("frannieGoodGirl")||"{}");
 state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];
@@ -241,10 +311,68 @@ let current=0,rating="",seconds=300,ticker=null;
 
 function save(){localStorage.setItem("frannieGoodGirl",JSON.stringify(state))}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function renderProblems(){problemGrid.innerHTML="";problems.forEach(p=>{let b=document.createElement("button");b.className="problem"+(state.selected.includes(p)?" active":"");b.textContent=p;b.onclick=()=>{state.selected.includes(p)?state.selected=state.selected.filter(x=>x!==p):state.selected.push(p);save();renderProblems()};problemGrid.appendChild(b)})}
+function renderProblems(){
+  problemGrid.innerHTML="";
+  problems.forEach(p=>{
+    let b=document.createElement("button");
+    b.className="problem"+(state.selected.includes(p)?" active":"");
+    b.textContent=p;
+    b.setAttribute("aria-pressed",state.selected.includes(p)?"true":"false");
+    b.onclick=()=>{
+      state.selected.includes(p)
+        ? state.selected=state.selected.filter(x=>x!==p)
+        : state.selected.push(p);
+      save();
+      renderProblems();
+      renderModules();
+    };
+    problemGrid.appendChild(b);
+  });
+  updateFocusSummary();
+}
+function updateFocusSummary(){
+  const count=state.selected.length;
+  const btn=document.getElementById("buildPlanBtn");
+  if(!count){
+    focusSummary.textContent="No focus areas selected yet.";
+    btn.disabled=true;
+  }else{
+    focusSummary.textContent="Selected focus: "+state.selected.join(", ")+". Matching lessons will be marked Recommended.";
+    btn.disabled=false;
+  }
+}
+function buildSelectedPlan(){
+  renderModules();
+  showScreen("plan");
+}
+function clearFocusAreas(){
+  state.selected=[];
+  save();
+  renderProblems();
+  renderModules();
+}
 function saveProfile(){state.profile={name:dogName.value,age:dogAge.value,size:dogSize.value,goal:mainGoal.value};save();heroStatus.textContent="Profile saved. Good girl operations may begin."}
 function loadProfile(){if(state.profile){dogName.value=state.profile.name||"Frannie";dogAge.value=state.profile.age||"";dogSize.value=state.profile.size||"Medium";mainGoal.value=state.profile.goal||""}}
-function renderModules(){moduleList.innerHTML="";lessons.forEach((l,i)=>{let done=state.completed.includes(i),locked=i>0&&!state.completed.includes(i-1);let d=document.createElement("div");d.className="module "+(done?"done ":"")+(locked?"locked":"");d.innerHTML=`<div class="num">${done?"✓":i+1}</div><div><div class="module-title">${l.title}</div><div class="module-sub">${l.sub}</div></div><button class="ghost">${done?"Review":locked?"Locked":"Open"}</button>`;d.querySelector("button").onclick=()=>{if(!locked)openLesson(i)};moduleList.appendChild(d)});updateProgress()}
+function renderModules(){
+  moduleList.innerHTML="";
+  const recommended=new Set();
+  state.selected.forEach(focus=>(focusLessonMap[focus]||[]).forEach(i=>recommended.add(i)));
+  lessons.forEach((l,i)=>{
+    let done=state.completed.includes(i),locked=i>0&&!state.completed.includes(i-1);
+    let d=document.createElement("div");
+    d.className="module "+(done?"done ":"")+(locked?"locked":"");
+    d.innerHTML=`<div class="num">${done?"✓":i+1}</div>
+      <div>
+        <div class="module-title">${l.title}</div>
+        <div class="module-sub">${l.sub}</div>
+        ${recommended.has(i)?'<span class="recommended">Recommended for selected focus</span>':""}
+      </div>
+      <button class="ghost">${done?"Review":locked?"Locked":"Open"}</button>`;
+    d.querySelector("button").onclick=()=>{if(!locked)openLesson(i)};
+    moduleList.appendChild(d);
+  });
+  updateProgress();
+}
 function updateProgress(){let n=state.completed.length;progressText.textContent=`${n} of ${lessons.length} lessons completed`;progressBar.style.width=(n/lessons.length*100)+"%";heroStatus.textContent=n===0?"Day 1: good girl status pending":n===lessons.length?"Program complete: certified good girl":"Progress detected: civilization is possible"}
 function openLesson(i){current=i;let l=lessons[i];lessonTitle.textContent=l.title;lessonIntro.textContent=l.intro;lessonSteps.innerHTML=l.steps.map(s=>`<li class="step">${s}</li>`).join("");lessonTip.textContent=l.tip;if(l.warning){lessonWarning.textContent=l.warning;lessonWarning.classList.remove("hidden")}else lessonWarning.classList.add("hidden");videoTitle.textContent=l.videoTitle;videoNote.textContent=l.videoNote;videoThumb.src=`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`;seconds=l.minutes*60;renderTimer();rating="";sessionNotes.value="";document.querySelectorAll("#ratings button").forEach(b=>b.classList.remove("active"));showScreen("lesson")}
 function rate(b,v){rating=v;document.querySelectorAll("#ratings button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}

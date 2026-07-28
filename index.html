@@ -236,7 +236,42 @@ textarea{min-height:90px;resize:vertical}
 </div>
 </section>
 
-<section id="log" class="screen"><div class="card" style="margin-top:16px"><h2>Good Girl log</h2><p>Completed sessions appear here.</p><div id="logList"></div></div></section>
+
+<section id="log" class="screen">
+<div class="card" style="margin-top:16px">
+  <div class="lesson-top">
+    <div>
+      <div class="eyebrow" style="color:var(--pink3)">Central record</div>
+      <h2>Frannie Log</h2>
+    </div>
+    <span class="pill">Everything in one place</span>
+  </div>
+  <p>Training and care entries appear here automatically. Mollie only enters information once.</p>
+
+  <div class="timeline-filter" id="mainLogFilters">
+    <button class="active" onclick="setMainLogFilter('all',this)">All</button>
+    <button onclick="setMainLogFilter('training',this)">Training</button>
+    <button onclick="setMainLogFilter('treatment',this)">Treatments</button>
+    <button onclick="setMainLogFilter('weight',this)">Weight</button>
+    <button onclick="setMainLogFilter('feeding',this)">Feeding</button>
+    <button onclick="setMainLogFilter('allergy',this)">Cautions</button>
+    <button onclick="setMainLogFilter('note',this)">Notes</button>
+  </div>
+
+  <div id="mainLogList"></div>
+
+  <div class="care-section" style="margin-top:16px">
+    <h3>Save, restore, or print</h3>
+    <p class="disclaimer">A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe.</p>
+    <div class="actions">
+      <button class="primary" onclick="downloadBackup()">Save backup</button>
+      <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore backup</button>
+      <button class="secondary" onclick="printFrannieLog()">Print / Save PDF</button>
+      <input id="restoreFile" type="file" accept=".json,application/json" class="hidden" onchange="restoreBackup(event)">
+    </div>
+  </div>
+</div>
+</section>
 
 
 <section id="care" class="screen"><div class="card" style="margin-top:16px">
@@ -276,7 +311,7 @@ textarea{min-height:90px;resize:vertical}
 <button class="nav active" onclick="showScreen('home',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Home</span></button>
 <button class="nav" onclick="showScreen('plan',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Plan</span></button>
 <button class="nav" onclick="showScreen('care',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Care</span></button>
-<button class="nav" onclick="showScreen('log',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Log</span></button>
+<button class="nav" onclick="showScreen('log',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Frannie Log</span></button>
 <button class="nav" onclick="showScreen('safety',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Safety</span></button></nav>
 
 <div class="modal" id="videoModal" onclick="modalBackdrop(event)">
@@ -310,7 +345,7 @@ const focusLessonMap={
 };
 
 let state=JSON.parse(localStorage.getItem("frannieGoodGirl")||"{}");
-state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];state.treatments=state.treatments||[];state.allergies=state.allergies||[];state.weights=state.weights||[];state.careNotes=state.careNotes||[];state.feeding=state.feeding||{};
+state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];state.treatments=state.treatments||[];state.allergies=state.allergies||[];state.weights=state.weights||[];state.careNotes=state.careNotes||[];state.feeding=state.feeding||{};state.feedingHistory=state.feedingHistory||[];
 let current=0,rating="",seconds=300,ticker=null;
 
 function save(){localStorage.setItem("frannieGoodGirl",JSON.stringify(state))}
@@ -380,7 +415,7 @@ function renderModules(){
 function updateProgress(){let n=state.completed.length;progressText.textContent=`${n} of ${lessons.length} lessons completed`;progressBar.style.width=(n/lessons.length*100)+"%";heroStatus.textContent=n===0?"Day 1: good girl status pending":n===lessons.length?"Program complete: certified good girl":"Progress detected: civilization is possible"}
 function openLesson(i){current=i;let l=lessons[i];lessonTitle.textContent=l.title;lessonIntro.textContent=l.intro;lessonSteps.innerHTML=l.steps.map(s=>`<li class="step">${s}</li>`).join("");lessonTip.textContent=l.tip;if(l.warning){lessonWarning.textContent=l.warning;lessonWarning.classList.remove("hidden")}else lessonWarning.classList.add("hidden");videoTitle.textContent=l.videoTitle;videoNote.textContent=l.videoNote;videoThumb.src=`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`;seconds=l.minutes*60;renderTimer();rating="";sessionNotes.value="";document.querySelectorAll("#ratings button").forEach(b=>b.classList.remove("active"));showScreen("lesson")}
 function rate(b,v){rating=v;document.querySelectorAll("#ratings button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}
-function completeLesson(){if(!state.completed.includes(current))state.completed.push(current);state.logs.unshift({date:new Date().toLocaleString(),lesson:lessons[current].title,rating:rating||"No rating",notes:sessionNotes.value.trim()});save();renderModules();renderLogs();showScreen("plan")}
+function completeLesson(){if(!state.completed.includes(current))state.completed.push(current);state.logs.unshift({date:new Date().toLocaleString(),lesson:lessons[current].title,rating:rating||"No rating",notes:sessionNotes.value.trim()});save();renderModules();renderLogs();renderMainLog();showScreen("plan")}
 function renderLogs(){logList.innerHTML=state.logs.length?state.logs.map(x=>`<div class="log-item"><strong>${esc(x.lesson)}</strong><div class="module-sub">${esc(x.date)} · ${esc(x.rating)}</div>${x.notes?`<p>${esc(x.notes)}</p>`:""}</div>`).join(""):"<p>No sessions logged yet.</p>"}
 function showScreen(id,btn){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));if(btn)btn.classList.add("active");else{let map={home:0,plan:1,care:2,log:3,safety:4};if(map[id]!==undefined)document.querySelectorAll(".nav")[map[id]].classList.add("active")}window.scrollTo({top:0,behavior:"smooth"})}
 function renderTimer(){timer.textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0")}
@@ -401,15 +436,23 @@ let timelineFilter="all";
 function todayISO(){return new Date().toISOString().slice(0,10)}
 function prettyDate(v){if(!v)return"No date";return new Date(v+"T12:00:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}
 function treatmentStatus(x){if(x.type==="Medication"&&!x.due)return["Ongoing","status-ongoing"];if(!x.due)return["Given","status-given"];const d=Math.ceil((new Date(x.due+"T12:00:00")-new Date(todayISO()+"T12:00:00"))/86400000);return d<0?["Overdue","status-overdue"]:d<=30?["Due soon","status-due"]:["Given","status-given"]}
-function addTreatment(){const n=treatmentName.value.trim();if(!n){alert("Add a treatment or vaccination name.");return}state.treatments.unshift({id:Date.now(),type:treatmentType.value,name:n,date:treatmentDate.value,due:treatmentDue.value,note:treatmentNote.value.trim()});treatmentName.value=treatmentDue.value=treatmentNote.value="";save();renderCare()}
-function removeTreatment(id){state.treatments=state.treatments.filter(x=>x.id!==id);save();renderCare()}
-function saveFeeding(){state.feeding={brand:foodBrand.value.trim(),amount:foodAmount.value.trim(),schedule:foodSchedule.value.trim(),note:foodNote.value.trim()};save();renderFeeding()}
-function addAllergy(){const v=allergyText.value.trim();if(!v){alert("Add an allergy or caution.");return}state.allergies.unshift({id:Date.now(),text:v});allergyText.value="";save();renderCare()}
-function removeAllergy(id){state.allergies=state.allergies.filter(x=>x.id!==id);save();renderCare()}
-function addWeight(){const v=weightValue.value.trim();if(!v){alert("Add Frannie’s weight.");return}state.weights.unshift({id:Date.now(),date:weightDate.value||todayISO(),value:v,note:weightNote.value.trim()});weightValue.value=weightNote.value="";save();renderCare()}
-function removeWeight(id){state.weights=state.weights.filter(x=>x.id!==id);save();renderCare()}
-function addCareNote(){const t=careNoteTitle.value.trim(),n=careNoteText.value.trim();if(!t&&!n){alert("Add a title or note.");return}state.careNotes.unshift({id:Date.now(),date:careNoteDate.value||todayISO(),title:t||"Care note",note:n});careNoteTitle.value=careNoteText.value="";save();renderCare()}
-function removeCareNote(id){state.careNotes=state.careNotes.filter(x=>x.id!==id);save();renderCare()}
+function addTreatment(){const n=treatmentName.value.trim();if(!n){alert("Add a treatment or vaccination name.");return}state.treatments.unshift({id:Date.now(),type:treatmentType.value,name:n,date:treatmentDate.value,due:treatmentDue.value,note:treatmentNote.value.trim()});treatmentName.value=treatmentDue.value=treatmentNote.value="";save();renderCare();renderMainLog()}
+function removeTreatment(id){state.treatments=state.treatments.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
+function saveFeeding(){
+  const next={brand:foodBrand.value.trim(),amount:foodAmount.value.trim(),schedule:foodSchedule.value.trim(),note:foodNote.value.trim()};
+  const before=JSON.stringify(state.feeding||{});
+  state.feeding=next;
+  if(JSON.stringify(next)!==before && Object.values(next).some(Boolean)){
+    state.feedingHistory.unshift({id:Date.now(),date:todayISO(),...next});
+  }
+  save();renderCare();renderMainLog();
+}
+function addAllergy(){const v=allergyText.value.trim();if(!v){alert("Add an allergy or caution.");return}state.allergies.unshift({id:Date.now(),date:todayISO(),text:v});allergyText.value="";save();renderCare();renderMainLog()}
+function removeAllergy(id){state.allergies=state.allergies.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
+function addWeight(){const v=weightValue.value.trim();if(!v){alert("Add Frannie’s weight.");return}state.weights.unshift({id:Date.now(),date:weightDate.value||todayISO(),value:v,note:weightNote.value.trim()});weightValue.value=weightNote.value="";save();renderCare();renderMainLog()}
+function removeWeight(id){state.weights=state.weights.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
+function addCareNote(){const t=careNoteTitle.value.trim(),n=careNoteText.value.trim();if(!t&&!n){alert("Add a title or note.");return}state.careNotes.unshift({id:Date.now(),date:careNoteDate.value||todayISO(),title:t||"Care note",note:n});careNoteTitle.value=careNoteText.value="";save();renderCare();renderMainLog()}
+function removeCareNote(id){state.careNotes=state.careNotes.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
 function renderFeeding(){foodBrand.value=state.feeding.brand||"";foodAmount.value=state.feeding.amount||"";foodSchedule.value=state.feeding.schedule||"";foodNote.value=state.feeding.note||"";const h=Object.values(state.feeding).some(Boolean);feedingSaved.classList.toggle("hidden",!h);if(h)feedingSaved.textContent=`Current routine: ${state.feeding.brand||"Food not named"}${state.feeding.amount?" · "+state.feeding.amount:""}${state.feeding.schedule?" · "+state.feeding.schedule:""}`}
 function renderTreatments(){treatmentList.innerHTML=state.treatments.length?state.treatments.map(x=>{const s=treatmentStatus(x);return`<div class="entry"><div class="entry-top"><div><strong>${esc(x.name)}</strong><small>${esc(x.type)}${x.date?" · Given "+prettyDate(x.date):""}${x.due?" · Next "+prettyDate(x.due):""}</small>${x.note?`<small>${esc(x.note)}</small>`:""}</div><div><span class="status-tag ${s[1]}">${s[0]}</span><br><button class="remove-btn" onclick="removeTreatment(${x.id})">Remove</button></div></div></div>`}).join(""):"<p>No treatments or vaccinations added yet.</p>"}
 function renderAllergies(){allergyList.innerHTML=state.allergies.length?state.allergies.map(x=>`<div class="entry"><div class="entry-top"><strong>${esc(x.text)}</strong><button class="remove-btn" onclick="removeAllergy(${x.id})">Remove</button></div></div>`).join(""):"<p>No allergies or cautions added yet.</p>"}
@@ -419,8 +462,166 @@ function renderTimeline(){const a=timelineItems().filter(x=>timelineFilter==="al
 function setTimelineFilter(t,b){timelineFilter=t;document.querySelectorAll(".timeline-filter button").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderTimeline()}
 function renderCare(){renderTreatments();renderFeeding();renderAllergies();renderWeights();renderTimeline()}
 
+
+let mainLogFilter="all";
+
+function allFrannieEntries(){
+  const entries=[];
+
+  state.logs.forEach(x=>entries.push({
+    type:"training",
+    dateRaw:new Date(x.date).getTime()||0,
+    date:x.date,
+    title:x.lesson,
+    detail:x.rating+(x.notes?" · "+x.notes:"")
+  }));
+
+  state.treatments.forEach(x=>entries.push({
+    type:"treatment",
+    dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),
+    date:prettyDate(x.date),
+    title:x.name,
+    detail:x.type+(x.due?" · Next due "+prettyDate(x.due):"")+(x.note?" · "+x.note:"")
+  }));
+
+  state.weights.forEach(x=>entries.push({
+    type:"weight",
+    dateRaw:new Date(x.date+"T12:00:00").getTime(),
+    date:prettyDate(x.date),
+    title:"Weight: "+x.value,
+    detail:x.note||""
+  }));
+
+  state.feedingHistory.forEach(x=>entries.push({
+    type:"feeding",
+    dateRaw:new Date(x.date+"T12:00:00").getTime(),
+    date:prettyDate(x.date),
+    title:"Feeding information updated",
+    detail:[x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")
+  }));
+
+  state.allergies.forEach(x=>entries.push({
+    type:"allergy",
+    dateRaw:new Date((x.date||todayISO())+"T12:00:00").getTime(),
+    date:prettyDate(x.date||todayISO()),
+    title:"Allergy or caution",
+    detail:x.text
+  }));
+
+  state.careNotes.forEach(x=>entries.push({
+    type:"note",
+    dateRaw:new Date(x.date+"T12:00:00").getTime(),
+    date:prettyDate(x.date),
+    title:x.title,
+    detail:x.note||""
+  }));
+
+  return entries.sort((a,b)=>b.dateRaw-a.dateRaw);
+}
+
+function renderMainLog(){
+  const el=document.getElementById("mainLogList");
+  if(!el)return;
+  const entries=allFrannieEntries().filter(x=>mainLogFilter==="all"||x.type===mainLogFilter);
+  el.innerHTML=entries.length?entries.map(x=>`
+    <div class="timeline-item">
+      <div class="timeline-type">${esc(x.type)}</div>
+      <strong>${esc(x.title)}</strong>
+      <div class="timeline-date">${esc(x.date||"No date")}</div>
+      ${x.detail?`<small>${esc(x.detail)}</small>`:""}
+    </div>`).join(""):"<p>No entries in this category yet.</p>";
+}
+
+function setMainLogFilter(type,btn){
+  mainLogFilter=type;
+  document.querySelectorAll("#mainLogFilters button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderMainLog();
+}
+
+function downloadBackup(){
+  const payload={
+    app:"Frannie’s a Good Girl",
+    version:7,
+    exportedAt:new Date().toISOString(),
+    data:state
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="frannie-good-girl-backup-"+todayISO()+".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function restoreBackup(event){
+  const file=event.target.files&&event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      const restored=parsed.data||parsed;
+      if(!restored||typeof restored!=="object")throw new Error("Invalid backup");
+      if(!confirm("Replace the information currently saved in this browser with this backup?"))return;
+      state=restored;
+      state.selected=state.selected||[];
+      state.completed=state.completed||[];
+      state.logs=state.logs||[];
+      state.treatments=state.treatments||[];
+      state.allergies=state.allergies||[];
+      state.weights=state.weights||[];
+      state.careNotes=state.careNotes||[];
+      state.feeding=state.feeding||{};
+      state.feedingHistory=state.feedingHistory||[];
+      save();
+      loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();renderMainLog();
+      alert("Frannie’s backup has been restored.");
+    }catch(err){
+      alert("That file could not be restored. Choose a Frannie backup JSON file.");
+    }finally{
+      event.target.value="";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function printFrannieLog(){
+  const entries=allFrannieEntries();
+  const profile=state.profile||{};
+  const rows=entries.length?entries.map(x=>`
+    <article>
+      <div class="type">${esc(x.type)}</div>
+      <h3>${esc(x.title)}</h3>
+      <div class="date">${esc(x.date||"No date")}</div>
+      ${x.detail?`<p>${esc(x.detail)}</p>`:""}
+    </article>`).join(""):"<p>No entries yet.</p>";
+
+  const w=window.open("","_blank");
+  if(!w){alert("Allow pop-ups to print Frannie’s log.");return}
+  w.document.write(`<!doctype html><html><head><title>Frannie Log</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#2b2225;margin:32px;line-height:1.4}
+      h1{margin-bottom:3px}.sub{color:#6d5d63;margin-bottom:24px}
+      article{border-bottom:1px solid #ddd;padding:12px 0}
+      article h3{margin:3px 0}.type{text-transform:uppercase;font-size:11px;font-weight:bold;color:#7e4f5b;letter-spacing:.08em}
+      .date{font-size:12px;color:#777}p{margin:5px 0}
+      @media print{body{margin:.45in}}
+    </style></head><body>
+    <h1>Frannie Log</h1>
+    <div class="sub">Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</div>
+    ${rows}
+    </body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(),250);
+}
+
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
-loadProfile();renderProblems();renderModules();renderLogs();renderCare();if(!treatmentDate.value)treatmentDate.value=todayISO();if(!weightDate.value)weightDate.value=todayISO();if(!careNoteDate.value)careNoteDate.value=todayISO();
+loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();if(!treatmentDate.value)treatmentDate.value=todayISO();if(!weightDate.value)weightDate.value=todayISO();if(!careNoteDate.value)careNoteDate.value=todayISO();
 </script>
 </body>
 </html>

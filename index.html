@@ -134,6 +134,18 @@ textarea{min-height:90px;resize:vertical}
 .nav svg{width:24px;height:24px;display:block}
 .nav span{display:block;line-height:1}
 
+
+.care-grid{display:grid;gap:14px}.care-section{background:#fffaf7;border:1px solid var(--line);border-radius:16px;padding:14px}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.entry-list{display:grid;gap:8px;margin-top:10px}
+.entry{padding:11px;border:1px solid var(--line);border-radius:13px;background:#fffdfb}.entry-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.entry small{display:block;color:#746168;margin-top:3px;line-height:1.35}.remove-btn{border:0;background:#f0dfdf;color:#7b4141;border-radius:9px;padding:6px 8px;font-weight:900}
+.status-tag{display:inline-block;padding:4px 7px;border-radius:999px;font-size:.66rem;font-weight:950;text-transform:uppercase;letter-spacing:.05em}
+.status-given{background:#e3ece5;color:#48604f}.status-due{background:#f2e4c7;color:#765622}.status-overdue{background:#f3d9d6;color:#803c39}.status-ongoing{background:#eadde8;color:#684d64}
+.timeline-filter{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}.timeline-filter button{border:1px solid var(--line);background:#fffaf7;border-radius:999px;padding:7px 10px;font-weight:850}
+.timeline-filter button.active{background:#efdce2;border-color:var(--pink3);color:#69424d}.timeline-item{padding:11px 11px 11px 18px;border-left:4px solid var(--pink);background:#fffaf7;border-radius:0 13px 13px 0;margin:8px 0}
+.timeline-type{font-size:.67rem;text-transform:uppercase;letter-spacing:.06em;font-weight:950;color:var(--pink3)}.timeline-date{font-size:.74rem;color:#806d73;margin-top:2px}
+@media(min-width:760px){.care-grid{grid-template-columns:1fr 1fr}.care-section.full{grid-column:1/-1}}
+
 </style>
 </head>
 <body>
@@ -226,6 +238,25 @@ textarea{min-height:90px;resize:vertical}
 
 <section id="log" class="screen"><div class="card" style="margin-top:16px"><h2>Good Girl log</h2><p>Completed sessions appear here.</p><div id="logList"></div></div></section>
 
+
+<section id="care" class="screen"><div class="card" style="margin-top:16px">
+<div class="lesson-top"><div><div class="eyebrow" style="color:var(--pink3)">Secondary section</div><h2>Frannie Care</h2></div><span class="pill">Training stays first</span></div>
+<p>Basic puppy information Mollie can keep here while Frannie is still in training.</p><div class="care-grid">
+<div class="care-section"><h3>Treatments & vaccinations</h3>
+<div class="row-2"><div><label>Type</label><select id="treatmentType"><option>Vaccination</option><option>Flea & tick</option><option>Heartworm</option><option>Medication</option></select></div><div><label>Name</label><input id="treatmentName" placeholder="e.g. Rabies"></div></div>
+<div class="row-2" style="margin-top:9px"><div><label>Date given / started</label><input id="treatmentDate" type="date"></div><div><label>Next due / end date</label><input id="treatmentDue" type="date"></div></div>
+<div style="margin-top:9px"><label>Note</label><input id="treatmentNote" placeholder="Optional"></div><div class="actions"><button class="primary" onclick="addTreatment()">Add treatment</button></div><div class="entry-list" id="treatmentList"></div></div>
+<div class="care-section"><h3>Current feeding</h3><div><label>Food brand / type</label><input id="foodBrand" placeholder="e.g. puppy kibble"></div>
+<div class="row-2" style="margin-top:9px"><div><label>Amount</label><input id="foodAmount" placeholder="e.g. 2 cups daily"></div><div><label>Schedule</label><input id="foodSchedule" placeholder="e.g. morning and evening"></div></div>
+<div style="margin-top:9px"><label>Feeding note</label><textarea id="foodNote" placeholder="Optional instructions"></textarea></div><div class="actions"><button class="primary" onclick="saveFeeding()">Save feeding info</button></div><div id="feedingSaved" class="focus-summary hidden"></div></div>
+<div class="care-section"><h3>Allergies & cautions</h3><div><label>Allergy, sensitivity, or warning</label><input id="allergyText" placeholder="e.g. chicken sensitivity"></div><div class="actions"><button class="primary" onclick="addAllergy()">Add caution</button></div><div class="entry-list" id="allergyList"></div></div>
+<div class="care-section"><h3>Weight</h3><div class="row-2"><div><label>Date</label><input id="weightDate" type="date"></div><div><label>Weight</label><input id="weightValue" placeholder="e.g. 34 lb"></div></div>
+<div style="margin-top:9px"><label>Note</label><input id="weightNote" placeholder="Optional"></div><div class="actions"><button class="primary" onclick="addWeight()">Add weight</button></div><div class="entry-list" id="weightList"></div></div>
+<div class="care-section full"><h3>Care note</h3><div class="row-2"><div><label>Date</label><input id="careNoteDate" type="date"></div><div><label>Title</label><input id="careNoteTitle" placeholder="e.g. Started supplement"></div></div>
+<div style="margin-top:9px"><label>Note</label><textarea id="careNoteText" placeholder="What changed or what should Mollie remember?"></textarea></div><div class="actions"><button class="primary" onclick="addCareNote()">Add to timeline</button></div></div>
+<div class="care-section full"><h3>Frannie timeline</h3><div class="timeline-filter"><button class="active" onclick="setTimelineFilter('all',this)">All</button><button onclick="setTimelineFilter('training',this)">Training</button><button onclick="setTimelineFilter('treatment',this)">Treatments</button><button onclick="setTimelineFilter('weight',this)">Weight</button><button onclick="setTimelineFilter('note',this)">Notes</button></div><div id="timelineList"></div></div>
+</div></div></section>
+
 <section id="safety" class="screen">
 <div class="card" style="margin-top:16px">
 <h2>Safety boundary</h2>
@@ -241,40 +272,12 @@ textarea{min-height:90px;resize:vertical}
 <footer>Personal-use prototype. Not affiliated with or endorsed by Cesar Millan.</footer>
 </div>
 
-<nav class="bottom-nav">
-<button class="nav active" onclick="showScreen('home',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
-<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-<ellipse cx="32" cy="42" rx="14" ry="11"/>
-<ellipse cx="16" cy="26" rx="6" ry="8"/>
-<ellipse cx="28" cy="18" rx="6" ry="8"/>
-<ellipse cx="40" cy="18" rx="6" ry="8"/>
-<ellipse cx="50" cy="28" rx="6" ry="8"/>
-</g></svg><span>Home</span></button>
-<button class="nav" onclick="showScreen('plan',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
-<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-<ellipse cx="32" cy="42" rx="14" ry="11"/>
-<ellipse cx="16" cy="26" rx="6" ry="8"/>
-<ellipse cx="28" cy="18" rx="6" ry="8"/>
-<ellipse cx="40" cy="18" rx="6" ry="8"/>
-<ellipse cx="50" cy="28" rx="6" ry="8"/>
-</g></svg><span>Plan</span></button>
-<button class="nav" onclick="showScreen('log',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
-<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-<ellipse cx="32" cy="42" rx="14" ry="11"/>
-<ellipse cx="16" cy="26" rx="6" ry="8"/>
-<ellipse cx="28" cy="18" rx="6" ry="8"/>
-<ellipse cx="40" cy="18" rx="6" ry="8"/>
-<ellipse cx="50" cy="28" rx="6" ry="8"/>
-</g></svg><span>Log</span></button>
-<button class="nav" onclick="showScreen('safety',this)"><svg viewBox="0 0 64 64" aria-hidden="true">
-<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-<ellipse cx="32" cy="42" rx="14" ry="11"/>
-<ellipse cx="16" cy="26" rx="6" ry="8"/>
-<ellipse cx="28" cy="18" rx="6" ry="8"/>
-<ellipse cx="40" cy="18" rx="6" ry="8"/>
-<ellipse cx="50" cy="28" rx="6" ry="8"/>
-</g></svg><span>Safety</span></button>
-</nav>
+<nav class="bottom-nav" style="grid-template-columns:repeat(5,1fr)">
+<button class="nav active" onclick="showScreen('home',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Home</span></button>
+<button class="nav" onclick="showScreen('plan',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Plan</span></button>
+<button class="nav" onclick="showScreen('care',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Care</span></button>
+<button class="nav" onclick="showScreen('log',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Log</span></button>
+<button class="nav" onclick="showScreen('safety',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Safety</span></button></nav>
 
 <div class="modal" id="videoModal" onclick="modalBackdrop(event)">
 <div class="modal-box">
@@ -307,7 +310,7 @@ const focusLessonMap={
 };
 
 let state=JSON.parse(localStorage.getItem("frannieGoodGirl")||"{}");
-state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];
+state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];state.treatments=state.treatments||[];state.allergies=state.allergies||[];state.weights=state.weights||[];state.careNotes=state.careNotes||[];state.feeding=state.feeding||{};
 let current=0,rating="",seconds=300,ticker=null;
 
 function save(){localStorage.setItem("frannieGoodGirl",JSON.stringify(state))}
@@ -379,7 +382,7 @@ function openLesson(i){current=i;let l=lessons[i];lessonTitle.textContent=l.titl
 function rate(b,v){rating=v;document.querySelectorAll("#ratings button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}
 function completeLesson(){if(!state.completed.includes(current))state.completed.push(current);state.logs.unshift({date:new Date().toLocaleString(),lesson:lessons[current].title,rating:rating||"No rating",notes:sessionNotes.value.trim()});save();renderModules();renderLogs();showScreen("plan")}
 function renderLogs(){logList.innerHTML=state.logs.length?state.logs.map(x=>`<div class="log-item"><strong>${esc(x.lesson)}</strong><div class="module-sub">${esc(x.date)} · ${esc(x.rating)}</div>${x.notes?`<p>${esc(x.notes)}</p>`:""}</div>`).join(""):"<p>No sessions logged yet.</p>"}
-function showScreen(id,btn){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));if(btn)btn.classList.add("active");else{let map={home:0,plan:1,log:2,safety:3};if(map[id]!==undefined)document.querySelectorAll(".nav")[map[id]].classList.add("active")}window.scrollTo({top:0,behavior:"smooth"})}
+function showScreen(id,btn){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));if(btn)btn.classList.add("active");else{let map={home:0,plan:1,care:2,log:3,safety:4};if(map[id]!==undefined)document.querySelectorAll(".nav")[map[id]].classList.add("active")}window.scrollTo({top:0,behavior:"smooth"})}
 function renderTimer(){timer.textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0")}
 function startTimer(){if(ticker)return;ticker=setInterval(()=>{if(seconds>0){seconds--;renderTimer()}else{pauseTimer();alert("Session complete. Finish with an easy success if possible.")}},1000)}
 function pauseTimer(){clearInterval(ticker);ticker=null} function resetTimer(){pauseTimer();seconds=lessons[current].minutes*60;renderTimer()}
@@ -393,8 +396,31 @@ function dismissSplash(){
 if(sessionStorage.getItem("frannieSplashSeen")==="1"){
   document.getElementById("splashScreen").classList.add("hide");
 }
+
+let timelineFilter="all";
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function prettyDate(v){if(!v)return"No date";return new Date(v+"T12:00:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}
+function treatmentStatus(x){if(x.type==="Medication"&&!x.due)return["Ongoing","status-ongoing"];if(!x.due)return["Given","status-given"];const d=Math.ceil((new Date(x.due+"T12:00:00")-new Date(todayISO()+"T12:00:00"))/86400000);return d<0?["Overdue","status-overdue"]:d<=30?["Due soon","status-due"]:["Given","status-given"]}
+function addTreatment(){const n=treatmentName.value.trim();if(!n){alert("Add a treatment or vaccination name.");return}state.treatments.unshift({id:Date.now(),type:treatmentType.value,name:n,date:treatmentDate.value,due:treatmentDue.value,note:treatmentNote.value.trim()});treatmentName.value=treatmentDue.value=treatmentNote.value="";save();renderCare()}
+function removeTreatment(id){state.treatments=state.treatments.filter(x=>x.id!==id);save();renderCare()}
+function saveFeeding(){state.feeding={brand:foodBrand.value.trim(),amount:foodAmount.value.trim(),schedule:foodSchedule.value.trim(),note:foodNote.value.trim()};save();renderFeeding()}
+function addAllergy(){const v=allergyText.value.trim();if(!v){alert("Add an allergy or caution.");return}state.allergies.unshift({id:Date.now(),text:v});allergyText.value="";save();renderCare()}
+function removeAllergy(id){state.allergies=state.allergies.filter(x=>x.id!==id);save();renderCare()}
+function addWeight(){const v=weightValue.value.trim();if(!v){alert("Add Frannie’s weight.");return}state.weights.unshift({id:Date.now(),date:weightDate.value||todayISO(),value:v,note:weightNote.value.trim()});weightValue.value=weightNote.value="";save();renderCare()}
+function removeWeight(id){state.weights=state.weights.filter(x=>x.id!==id);save();renderCare()}
+function addCareNote(){const t=careNoteTitle.value.trim(),n=careNoteText.value.trim();if(!t&&!n){alert("Add a title or note.");return}state.careNotes.unshift({id:Date.now(),date:careNoteDate.value||todayISO(),title:t||"Care note",note:n});careNoteTitle.value=careNoteText.value="";save();renderCare()}
+function removeCareNote(id){state.careNotes=state.careNotes.filter(x=>x.id!==id);save();renderCare()}
+function renderFeeding(){foodBrand.value=state.feeding.brand||"";foodAmount.value=state.feeding.amount||"";foodSchedule.value=state.feeding.schedule||"";foodNote.value=state.feeding.note||"";const h=Object.values(state.feeding).some(Boolean);feedingSaved.classList.toggle("hidden",!h);if(h)feedingSaved.textContent=`Current routine: ${state.feeding.brand||"Food not named"}${state.feeding.amount?" · "+state.feeding.amount:""}${state.feeding.schedule?" · "+state.feeding.schedule:""}`}
+function renderTreatments(){treatmentList.innerHTML=state.treatments.length?state.treatments.map(x=>{const s=treatmentStatus(x);return`<div class="entry"><div class="entry-top"><div><strong>${esc(x.name)}</strong><small>${esc(x.type)}${x.date?" · Given "+prettyDate(x.date):""}${x.due?" · Next "+prettyDate(x.due):""}</small>${x.note?`<small>${esc(x.note)}</small>`:""}</div><div><span class="status-tag ${s[1]}">${s[0]}</span><br><button class="remove-btn" onclick="removeTreatment(${x.id})">Remove</button></div></div></div>`}).join(""):"<p>No treatments or vaccinations added yet.</p>"}
+function renderAllergies(){allergyList.innerHTML=state.allergies.length?state.allergies.map(x=>`<div class="entry"><div class="entry-top"><strong>${esc(x.text)}</strong><button class="remove-btn" onclick="removeAllergy(${x.id})">Remove</button></div></div>`).join(""):"<p>No allergies or cautions added yet.</p>"}
+function renderWeights(){weightList.innerHTML=state.weights.length?state.weights.map(x=>`<div class="entry"><div class="entry-top"><div><strong>${esc(x.value)}</strong><small>${prettyDate(x.date)}${x.note?" · "+esc(x.note):""}</small></div><button class="remove-btn" onclick="removeWeight(${x.id})">Remove</button></div></div>`).join(""):"<p>No weight entries yet.</p>"}
+function timelineItems(){const a=[];state.logs.forEach(x=>a.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>a.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>a.push({type:"weight",dateRaw:new Date(x.date+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.careNotes.forEach(x=>a.push({type:"note",dateRaw:new Date(x.date+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||"",id:x.id}));return a.sort((x,y)=>y.dateRaw-x.dateRaw)}
+function renderTimeline(){const a=timelineItems().filter(x=>timelineFilter==="all"||x.type===timelineFilter);timelineList.innerHTML=a.length?a.map(x=>`<div class="timeline-item"><div class="timeline-type">${esc(x.type)}</div><strong>${esc(x.title)}</strong><div class="timeline-date">${esc(x.date||"No date")}</div>${x.detail?`<small>${esc(x.detail)}</small>`:""}${x.type==="note"?`<div style="margin-top:7px"><button class="remove-btn" onclick="removeCareNote(${x.id})">Remove</button></div>`:""}</div>`).join(""):"<p>No timeline entries yet.</p>"}
+function setTimelineFilter(t,b){timelineFilter=t;document.querySelectorAll(".timeline-filter button").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderTimeline()}
+function renderCare(){renderTreatments();renderFeeding();renderAllergies();renderWeights();renderTimeline()}
+
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
-loadProfile();renderProblems();renderModules();renderLogs();
+loadProfile();renderProblems();renderModules();renderLogs();renderCare();if(!treatmentDate.value)treatmentDate.value=todayISO();if(!weightDate.value)weightDate.value=todayISO();if(!careNoteDate.value)careNoteDate.value=todayISO();
 </script>
 </body>
 </html>

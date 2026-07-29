@@ -107,8 +107,7 @@ function renderModules(){
 function updateProgress(){const n=state.completed.length;$("progressText").textContent=`${n} of ${lessons.length} lessons completed`;$("progressBar").style.width=(n/lessons.length*100)+"%";$("heroStatus").textContent=n===0?"Day 1: good girl status pending":n===lessons.length?"Program complete: certified good girl":"Progress detected: civilization is possible"}
 function openLesson(i){current=i;const l=lessons[i];$("lessonTitle").textContent=l.title;$("lessonIntro").textContent=l.intro;$("lessonSteps").innerHTML=l.steps.map(s=>`<li class="step">${esc(s)}</li>`).join("");$("lessonTip").textContent=l.tip;if(l.warning){$("lessonWarning").textContent=l.warning;$("lessonWarning").classList.remove("hidden")}else $("lessonWarning").classList.add("hidden");$("videoTitle").textContent=l.videoTitle;$("videoNote").textContent=l.videoNote;$("videoThumb").src=`https://i.ytimg.com/vi/${l.videoId}/hqdefault.jpg`;seconds=l.minutes*60;renderTimer();rating="";$("sessionNotes").value="";document.querySelectorAll("#ratings button").forEach(b=>b.classList.remove("active"));showScreen("lesson")}
 function rate(b,v){rating=v;document.querySelectorAll("#ratings button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}
-function completeLesson(){if(!state.completed.includes(current))state.completed.push(current);state.logs.unshift({id:uid(),date:new Date().toLocaleString(),lesson:lessons[current].title,rating:rating||"No rating",notes:$("sessionNotes").value.trim()});persist();renderModules();renderLogs();renderMainLog();showScreen("plan")}
-function renderLogs(){$("logList").innerHTML=state.logs.length?state.logs.map(x=>`<div class="log-item"><strong>${esc(x.lesson)}</strong><div class="module-sub">${esc(x.date)} · ${esc(x.rating)}</div>${x.notes?`<p>${esc(x.notes)}</p>`:""}</div>`).join(""):"<p>No sessions logged yet.</p>"}
+function completeLesson(){if(!state.completed.includes(current))state.completed.push(current);state.logs.unshift({id:uid(),date:new Date().toLocaleString(),lesson:lessons[current].title,rating:rating||"No rating",notes:$("sessionNotes").value.trim()});persist();renderModules();renderMainLog();showScreen("plan")}
 function showScreen(id,btn){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   $(id).classList.add("active");
@@ -187,7 +186,7 @@ async function restoreBackup(event){
     if(!hasMeaningfulData(restored))throw new Error("The backup does not contain any Frannie information.");
     if(hasMeaningfulData()&&!confirm("Replace the Frannie information currently saved on this device with this backup?"))return;
     state=restored;if(!persist())throw new Error("The restored information could not be saved.");
-    cancelTreatmentEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();alert("Frannie’s backup has been restored.")
+    cancelTreatmentEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();showScreen("home");alert("Frannie’s backup has been restored.")
   }catch(err){console.error("Restore failed",err);alert(err&&err.message?err.message:"That file could not be restored. Choose a Frannie backup JSON file.")}
   finally{input.value=""}
 }
@@ -198,7 +197,7 @@ function printFrannieLog(mode="compact"){
   document.documentElement.dataset.printMode=mode;
   const cleanup=()=>{delete document.documentElement.dataset.printMode;window.removeEventListener("afterprint",cleanup)};window.addEventListener("afterprint",cleanup);setTimeout(()=>window.print(),100)
 }
-function initializeUI(){loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();if(!$("treatmentDate").value)$("treatmentDate").value=todayISO();if(!$("weightDate").value)$("weightDate").value=todayISO();if(!$("careNoteDate").value)$("careNoteDate").value=todayISO();if(!$("quickLogDate").value)$("quickLogDate").value=todayISO()}
+function initializeUI(){loadProfile();renderProblems();renderModules();renderCare();renderMainLog();if(!$("treatmentDate").value)$("treatmentDate").value=todayISO();if(!$("weightDate").value)$("weightDate").value=todayISO();if(!$("careNoteDate").value)$("careNoteDate").value=todayISO();if(!$("quickLogDate").value)$("quickLogDate").value=todayISO()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
 window.addEventListener("pageshow",()=>{state=Store.load();initializeUI()});
 window.addEventListener("pagehide",()=>{persist()});

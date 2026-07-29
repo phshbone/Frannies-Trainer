@@ -137,6 +137,13 @@ function openVideo(){const l=lessons[current];$("modalTitle").textContent=l.vide
 function closeVideo(){$("videoModal").classList.remove("open");$("videoFrame").innerHTML="";document.body.style.overflow=""}
 function modalBackdrop(e){if(e.target===$("videoModal"))closeVideo()}
 function resetApp(){if(confirm("Erase Frannie’s saved profile, progress and logs?")){Store.clear();location.reload()}}
+function dismissInstallCurtain(){
+  try{localStorage.setItem("frannieInstallCurtainCleared","1");}catch(err){}
+  document.documentElement.classList.remove("install-required");
+  document.documentElement.classList.add("install-cleared");
+  const curtain=$("installCurtain");
+  if(curtain){curtain.setAttribute("aria-hidden","true");}
+}
 function dismissSplash(){const splash=$("splashScreen");if(!splash)return;splash.classList.add("hide");splash.setAttribute("aria-hidden","true");sessionStorage.setItem("frannieSplashSeen","1")}
 if(sessionStorage.getItem("frannieSplashSeen")==="1"){const splash=$("splashScreen");if(splash){splash.classList.add("hide");splash.setAttribute("aria-hidden","true")}}
 

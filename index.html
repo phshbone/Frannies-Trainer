@@ -210,18 +210,9 @@ body{
 }
 
 
-.persistence-status{
-  position:fixed;z-index:10000;right:10px;
-  bottom:calc(92px + env(safe-area-inset-bottom));
-  padding:7px 10px;border-radius:999px;
-  background:rgba(33,25,29,.92);color:#f7e9ed;
-  border:1px solid rgba(255,255,255,.15);
-  font-size:.68rem;font-weight:900;
-  opacity:0;transform:translateY(6px);
-  transition:.2s;pointer-events:none;
-}
+.persistence-status{position:fixed;z-index:10000;right:10px;bottom:calc(92px + env(safe-area-inset-bottom));padding:7px 10px;border-radius:999px;background:rgba(33,25,29,.94);color:#f7e9ed;border:1px solid rgba(255,255,255,.15);font-size:.68rem;font-weight:900;opacity:0;transform:translateY(6px);transition:.2s;pointer-events:none}
 .persistence-status.show{opacity:1;transform:none}
-
+.export-tertiary{border:0;background:transparent;color:#72515b;text-decoration:underline;padding:8px 4px;font-weight:850}
 </style>
 </head>
 <body>
@@ -340,11 +331,11 @@ body{
 
   <div class="care-section" style="margin-top:16px">
     <h3>Save, restore, or print</h3>
-    <p class="disclaimer">A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe. On iPhone, the print screen can also be expanded and shared as a PDF.</p>
+    <p class="disclaimer">Save or share creates one Frannie records file containing her profile, training progress, logs, and care information. On iPhone, Mollie can save it to Files, text it, email it, or share it to another app.</p>
     <div class="actions">
-      <button class="primary" onclick="downloadBackup()">Save backup</button>
-      <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore backup</button>
-      <button class="secondary" onclick="printFrannieLog()">Print / PDF options</button>
+      <button class="primary" onclick="saveOrShareRecords()">Save or share records</button>
+      <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore saved file</button>
+      <button class="export-tertiary" onclick="printFrannieLog()">Print instead</button>
       <input id="restoreFile" type="file" accept=".json,application/json" class="hidden" onchange="restoreBackup(event)">
     </div>
   </div>
@@ -385,7 +376,7 @@ body{
 <footer>Personal-use prototype. Not affiliated with or endorsed by Cesar Millan.</footer>
 </div>
 
-<div id="persistenceStatus" class="persistence-status" role="status">Saved on this device</div>
+<div id="persistenceStatus" class="persistence-status" role="status">Saved</div>
 <nav class="bottom-nav" style="grid-template-columns:repeat(5,1fr)">
 <button class="nav active" onclick="showScreen('home',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Home</span></button>
 <button class="nav" onclick="showScreen('plan',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Plan</span></button>
@@ -425,7 +416,10 @@ const focusLessonMap={
 
 
 const STORAGE_KEY="frannieGoodGirl";
-const DRAFT_KEY="frannieGoodGirlDrafts";
+const DB_NAME="FrannieGoodGirlDB";
+const DB_STORE="records";
+let state={};
+let current=0,rating="",seconds=300,ticker=null;
 let saveFlashTimer=null;
 
 function flashSaved(message="Saved on this device"){
@@ -434,47 +428,77 @@ function flashSaved(message="Saved on this device"){
   el.textContent=message;
   el.classList.add("show");
   clearTimeout(saveFlashTimer);
-  saveFlashTimer=setTimeout(()=>el.classList.remove("show"),1800);
+  saveFlashTimer=setTimeout(()=>el.classList.remove("show"),1600);
 }
-
-function openFrannieDB(){
+function normalizeState(){
+  state=state&&typeof state==="object"?state:{};
+  state.selected=state.selected||[];
+  state.completed=state.completed||[];
+  state.logs=state.logs||[];
+  state.treatments=state.treatments||[];
+  state.allergies=state.allergies||[];
+  state.weights=state.weights||[];
+  state.careNotes=state.careNotes||[];
+  state.feeding=state.feeding||{};
+  state.feedingHistory=state.feedingHistory||[];
+  state.drafts=state.drafts||{};
+}
+function openDB(){
   return new Promise((resolve,reject)=>{
     if(!("indexedDB" in window)){resolve(null);return}
-    const req=indexedDB.open("FrannieGoodGirlDB",1);
-    req.onupgradeneeded=()=>req.result.createObjectStore("app");
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=()=>{
+      if(!req.result.objectStoreNames.contains(DB_STORE))req.result.createObjectStore(DB_STORE);
+    };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
   });
 }
-async function idbWrite(value){
+async function readDB(){
   try{
-    const db=await openFrannieDB();
-    if(!db)return;
-    const tx=db.transaction("app","readwrite");
-    tx.objectStore("app").put(value,STORAGE_KEY);
-  }catch(e){}
-}
-async function idbRead(){
-  try{
-    const db=await openFrannieDB();
+    const db=await openDB();
     if(!db)return null;
     return await new Promise((resolve,reject)=>{
-      const tx=db.transaction("app","readonly");
-      const req=tx.objectStore("app").get(STORAGE_KEY);
+      const req=db.transaction(DB_STORE,"readonly").objectStore(DB_STORE).get(STORAGE_KEY);
       req.onsuccess=()=>resolve(req.result||null);
       req.onerror=()=>reject(req.error);
     });
   }catch(e){return null}
 }
-
-let state=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
-state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];state.treatments=state.treatments||[];state.allergies=state.allergies||[];state.weights=state.weights||[];state.careNotes=state.careNotes||[];state.feeding=state.feeding||{};state.feedingHistory=state.feedingHistory||[];
-let current=0,rating="",seconds=300,ticker=null;
-
-function save(showNotice=false){
-  const serialized=JSON.stringify(state);
-  localStorage.setItem(STORAGE_KEY,serialized);
-  idbWrite(state);
+async function writeDB(payload){
+  try{
+    const db=await openDB();
+    if(!db)return;
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(DB_STORE,"readwrite");
+      tx.objectStore(DB_STORE).put(payload,STORAGE_KEY);
+      tx.oncomplete=resolve;
+      tx.onerror=()=>reject(tx.error);
+    });
+  }catch(e){}
+}
+function decodeStored(raw){
+  if(!raw)return null;
+  try{
+    const parsed=typeof raw==="string"?JSON.parse(raw):raw;
+    if(parsed&&parsed.data&&parsed.updatedAt)return parsed;
+    if(parsed&&typeof parsed==="object")return {updatedAt:0,data:parsed};
+  }catch(e){}
+  return null;
+}
+async function loadSavedState(){
+  let local=null;
+  try{local=decodeStored(localStorage.getItem(STORAGE_KEY))}catch(e){}
+  const indexed=decodeStored(await readDB());
+  const chosen=!local?indexed:!indexed?local:(indexed.updatedAt>local.updatedAt?indexed:local);
+  state=chosen?chosen.data:{};
+  normalizeState();
+}
+async function save(showNotice=false){
+  normalizeState();
+  const payload={updatedAt:Date.now(),data:state};
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(payload))}catch(e){}
+  await writeDB(payload);
   if(showNotice)flashSaved();
 }
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
@@ -523,9 +547,9 @@ function clearFocusAreas(){
   renderProblems();
   renderModules();
 }
-function saveProfile(){
+async function saveProfile(){
   state.profile={name:dogName.value,age:dogAge.value,size:dogSize.value,goal:mainGoal.value};
-  save(true);
+  await await save(true);
   heroStatus.textContent="Profile saved. Good girl operations may begin.";
   const msg=document.getElementById("profileSaved");
   msg.classList.remove("hidden");
@@ -564,10 +588,7 @@ function startTimer(){if(ticker)return;ticker=setInterval(()=>{if(seconds>0){sec
 function pauseTimer(){clearInterval(ticker);ticker=null} function resetTimer(){pauseTimer();seconds=lessons[current].minutes*60;renderTimer()}
 function openVideo(){let l=lessons[current];modalTitle.textContent=l.videoTitle;youtubeFallback.href=`https://www.youtube.com/watch?v=${l.videoId}`;videoFrame.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${l.videoId}?autoplay=1&rel=0&playsinline=1" title="${esc(l.videoTitle)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;videoModal.classList.add("open");document.body.style.overflow="hidden"}
 function closeVideo(){videoModal.classList.remove("open");videoFrame.innerHTML="";document.body.style.overflow=""} function modalBackdrop(e){if(e.target===videoModal)closeVideo()}
-function resetApp(){if(confirm("Erase Frannie’s saved profile, progress and logs?")){localStorage.removeItem(STORAGE_KEY);
-localStorage.removeItem(DRAFT_KEY);
-openFrannieDB().then(db=>{if(db){const tx=db.transaction("app","readwrite");tx.objectStore("app").delete(STORAGE_KEY)}});
-location.reload()}}
+function resetApp(){if(confirm("Erase Frannie’s saved profile, progress and logs?")){localStorage.removeItem(STORAGE_KEY);openDB().then(db=>{if(db){const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).delete(STORAGE_KEY)}});location.reload()}}
 function dismissSplash(){
   document.getElementById("splashScreen").classList.add("hide");
   sessionStorage.setItem("frannieSplashSeen","1");
@@ -584,10 +605,11 @@ function addTreatment(){const n=treatmentName.value.trim();if(!n){alert("Add a t
 function removeTreatment(id){state.treatments=state.treatments.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
 function saveFeeding(){
   const next={brand:foodBrand.value.trim(),amount:foodAmount.value.trim(),schedule:foodSchedule.value.trim(),note:foodNote.value.trim()};
-  const before=JSON.stringify(state.feeding||{});
   state.feeding=next;
-  if(JSON.stringify(next)!==before && Object.values(next).some(Boolean)){
-    state.feedingHistory.unshift({id:Date.now(),date:todayISO(),...next});
+  const latest=state.feedingHistory[0];
+  if(Object.values(next).some(Boolean)){
+    const same=latest&&latest.brand===next.brand&&latest.amount===next.amount&&latest.schedule===next.schedule&&latest.note===next.note;
+    if(!same)state.feedingHistory.unshift({id:Date.now(),date:todayISO(),...next});
   }
   save(true);renderCare();renderMainLog();
 }
@@ -613,7 +635,7 @@ function addQuickLogNote(){
   if(!title&&!note){alert("Add a title or note.");return}
   state.careNotes.unshift({id:Date.now(),date:quickLogDate.value||todayISO(),title:title||"General log note",note});
   quickLogTitle.value="";quickLogText.value="";quickLogDate.value=todayISO();
-  save(true);renderCare();renderMainLog();
+  save();renderCare();renderMainLog();
   const msg=document.getElementById("quickLogSaved");msg.classList.remove("hidden");setTimeout(()=>msg.classList.add("hidden"),2600);
 }
 
@@ -713,7 +735,7 @@ function restoreBackup(event){
   const file=event.target.files&&event.target.files[0];
   if(!file)return;
   const reader=new FileReader();
-  reader.onload=()=>{
+  reader.onload=async()=>{
     try{
       const parsed=JSON.parse(reader.result);
       const restored=parsed.data||parsed;
@@ -729,12 +751,9 @@ function restoreBackup(event){
       state.careNotes=state.careNotes||[];
       state.feeding=state.feeding||{};
       state.feedingHistory=state.feedingHistory||[];
-      save();
       normalizeState();
-rerenderAll();
-restoreDrafts();
-attachAutoSave();
-recoverFromIndexedDB();renderMainLog();
+      await save(true);
+      loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();restoreDrafts();
       alert("Frannie’s backup has been restored.");
     }catch(err){
       alert("That file could not be restored. Choose a Frannie backup JSON file.");
@@ -755,39 +774,21 @@ function printFrannieLog(){
 }
 
 
-const draftFieldIds=[
-  "dogName","dogAge","dogSize","mainGoal",
-  "treatmentType","treatmentName","treatmentDate","treatmentDue","treatmentNote",
-  "foodBrand","foodAmount","foodSchedule","foodNote",
-  "allergyText","weightDate","weightValue","weightNote",
-  "careNoteDate","careNoteTitle","careNoteText",
-  "quickLogDate","quickLogTitle","quickLogText","sessionNotes"
-];
+const draftFieldIds=["treatmentType","treatmentName","treatmentDate","treatmentDue","treatmentNote","allergyText","weightDate","weightValue","weightNote","careNoteDate","careNoteTitle","careNoteText","quickLogDate","quickLogTitle","quickLogText","sessionNotes"];
 
-function readDrafts(){
-  try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||"{}")}catch(e){return {}}
-}
-function saveDraftField(el){
-  const drafts=readDrafts();
-  drafts[el.id]=el.value;
-  localStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));
-  flashSaved("Draft saved");
-}
 function restoreDrafts(){
-  const drafts=readDrafts();
   draftFieldIds.forEach(id=>{
     const el=document.getElementById(id);
-    if(!el || drafts[id]===undefined)return;
-    /* Do not overwrite committed profile/care values already restored from state. */
-    if(el.value==="")el.value=drafts[id];
+    if(el && state.drafts[id]!==undefined)el.value=state.drafts[id];
   });
 }
-function clearDraftFields(ids){
-  const drafts=readDrafts();
-  ids.forEach(id=>delete drafts[id]);
-  localStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));
+function saveDraftField(el){
+  state.drafts[el.id]=el.value;
+  save(false);
+  flashSaved("Draft saved");
 }
-function attachAutoSave(){
+function clearDraftFields(ids){ids.forEach(id=>delete state.drafts[id])}
+function attachDraftAutosave(){
   draftFieldIds.forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
@@ -795,40 +796,72 @@ function attachAutoSave(){
     el.addEventListener("change",()=>saveDraftField(el));
   });
 }
-
-async function recoverFromIndexedDB(){
-  const backup=await idbRead();
-  const localHasData=state && Object.keys(state).length>0;
-  if(!localHasData && backup && Object.keys(backup).length){
-    state=backup;
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-    normalizeState();
-    rerenderAll();
-    flashSaved("Saved data restored");
-  }
+function autoSaveCommittedFields(){
+  const commitProfile=()=>{
+    state.profile={name:dogName.value,age:dogAge.value,size:dogSize.value,goal:mainGoal.value};
+    save(false);flashSaved();
+  };
+  ["dogName","dogAge","dogSize","mainGoal"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.addEventListener("input",commitProfile);el.addEventListener("change",commitProfile)}
+  });
+  const commitFeeding=()=>{
+    state.feeding={brand:foodBrand.value.trim(),amount:foodAmount.value.trim(),schedule:foodSchedule.value.trim(),note:foodNote.value.trim()};
+    save(false);flashSaved();
+  };
+  ["foodBrand","foodAmount","foodSchedule","foodNote"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.addEventListener("input",commitFeeding);el.addEventListener("change",commitFeeding)}
+  });
 }
-function normalizeState(){
-  state.selected=state.selected||[];
-  state.completed=state.completed||[];
-  state.logs=state.logs||[];
-  state.treatments=state.treatments||[];
-  state.allergies=state.allergies||[];
-  state.weights=state.weights||[];
-  state.careNotes=state.careNotes||[];
-  state.feeding=state.feeding||{};
-  state.feedingHistory=state.feedingHistory||[];
+function setupKeyboardNext(){
+  const fields=[...document.querySelectorAll('input:not([type="file"]):not([disabled]),select,textarea')];
+  fields.forEach((el,i)=>{
+    if(el.tagName!=="TEXTAREA")el.setAttribute("enterkeyhint",i===fields.length-1?"done":"next");
+    el.addEventListener("keydown",e=>{
+      if(e.key!=="Enter"||el.tagName==="TEXTAREA")return;
+      e.preventDefault();
+      const next=fields[i+1];
+      if(next)next.focus();else el.blur();
+    });
+  });
 }
-function rerenderAll(){
+function recordsPayload(){return {app:"Frannie’s a Good Girl",version:13,exportedAt:new Date().toISOString(),data:state}}
+async function saveOrShareRecords(){
+  await save(false);
+  const file=new File([JSON.stringify(recordsPayload(),null,2)],"frannie-records-"+todayISO()+".json",{type:"application/json"});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({title:"Frannie Records",text:"Frannie’s training and care records",files:[file]});
+      flashSaved("Shared");return;
+    }
+  }catch(e){if(e&&e.name==="AbortError")return}
+  const url=URL.createObjectURL(file);
+  const a=document.createElement("a");
+  a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  flashSaved("Saved to Files");
+}
+async function initializeApp(){
+  await loadSavedState();
   loadProfile();
   renderProblems();
   renderModules();
   renderLogs();
   renderCare();
   renderMainLog();
+  restoreDrafts();
+  attachDraftAutosave();
+  autoSaveCommittedFields();
+  setupKeyboardNext();
+  if(!treatmentDate.value)treatmentDate.value=todayISO();
+  if(!weightDate.value)weightDate.value=todayISO();
+  if(!careNoteDate.value)careNoteDate.value=todayISO();
+  if(document.getElementById("quickLogDate")&&!quickLogDate.value)quickLogDate.value=todayISO();
 }
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
-loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();if(!treatmentDate.value)treatmentDate.value=todayISO();if(!weightDate.value)weightDate.value=todayISO();if(!careNoteDate.value)careNoteDate.value=todayISO();if(document.getElementById("quickLogDate")&&!quickLogDate.value)quickLogDate.value=todayISO();
+initializeApp();
 </script>
 <section id="printReport" class="print-only"></section></body>
 </html>

@@ -882,7 +882,7 @@ async function saveOrShareRecords(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   flashSaved("Saved to Files");
 }
-async async function initializeApp(){
+async function initializeApp(){
   await loadSavedState();
   loadProfile();
   renderProblems();

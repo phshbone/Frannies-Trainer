@@ -22,11 +22,11 @@ const focusLessonMap={
 
 
 const STORAGE_KEY="franniesGoodGirlStableV1";
-const STORAGE_VERSION=3;
+const STORAGE_VERSION=4;
 const $=id=>document.getElementById(id);
 
 function defaultState(){
-  return {version:STORAGE_VERSION,profile:null,selected:[],completed:[],logs:[],treatments:[],allergies:[],weights:[],careNotes:[],feeding:null,feedingItems:[],feedingHistory:[]};
+  return {version:STORAGE_VERSION,profile:null,selected:[],completed:[],logs:[],treatments:[],treatmentHistory:[],allergies:[],weights:[],heights:[],careNotes:[],feeding:null,feedingItems:[],feedingHistory:[]};
 }
 function normalizeState(raw){
   const base=defaultState();
@@ -40,8 +40,10 @@ function normalizeState(raw){
     completed:Array.isArray(raw.completed)?raw.completed:[],
     logs:Array.isArray(raw.logs)?raw.logs:[],
     treatments:Array.isArray(raw.treatments)?raw.treatments:[],
+    treatmentHistory:Array.isArray(raw.treatmentHistory)?raw.treatmentHistory:[],
     allergies:Array.isArray(raw.allergies)?raw.allergies:[],
     weights:Array.isArray(raw.weights)?raw.weights:[],
+    heights:Array.isArray(raw.heights)?raw.heights:[],
     careNotes:Array.isArray(raw.careNotes)?raw.careNotes:[],
     feeding:null,
     feedingItems:Array.isArray(raw.feedingItems)?raw.feedingItems:(raw.feeding&&typeof raw.feeding==="object"?[{
@@ -79,7 +81,7 @@ const Store={
 };
 let state=Store.load();
 let current=0,rating="",seconds=300,ticker=null,timelineFilter="all",mainLogFilter="all";
-let editing={treatment:null,feeding:null,allergy:null,weight:null,careNote:null};
+let editing={treatment:null,feeding:null,allergy:null,weight:null,height:null,careNote:null};
 function persist(){return Store.save(state)}
 function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
@@ -91,8 +93,8 @@ function hasMeaningfulData(value=state){
   return Boolean(
     value.profile || value.feeding || value.feedingItems?.length ||
     value.selected?.length || value.completed?.length || value.logs?.length ||
-    value.treatments?.length || value.allergies?.length || value.weights?.length ||
-    value.careNotes?.length || value.feedingHistory?.length
+    value.treatments?.length || value.treatmentHistory?.length || value.allergies?.length ||
+    value.weights?.length || value.heights?.length || value.careNotes?.length || value.feedingHistory?.length
   );
 }
 
@@ -141,7 +143,15 @@ function treatmentStatus(x){if(x.type==="Medication"&&!x.due)return["Ongoing","s
 function saveTreatment(){const name=$("treatmentName").value.trim();if(!name){alert("Add a treatment or vaccination name.");return}const item={id:editing.treatment||uid(),type:$("treatmentType").value,name,date:$("treatmentDate").value,due:$("treatmentDue").value,note:$("treatmentNote").value.trim()};if(editing.treatment)state.treatments=state.treatments.map(x=>x.id===editing.treatment?item:x);else state.treatments.unshift(item);persist();cancelTreatmentEdit();renderCare();renderMainLog()}
 function editTreatment(id){const x=state.treatments.find(v=>v.id===id);if(!x)return;editing.treatment=id;$("treatmentType").value=x.type;$("treatmentName").value=x.name;$("treatmentDate").value=x.date||"";$("treatmentDue").value=x.due||"";$("treatmentNote").value=x.note||"";setButtonEdit("treatmentSaveBtn","treatmentCancelBtn",true,"Add treatment","Save changes");$("treatmentName").focus()}
 function cancelTreatmentEdit(){editing.treatment=null;$("treatmentType").value="Vaccination";$("treatmentName").value="";$("treatmentDate").value=todayISO();$("treatmentDue").value="";$("treatmentNote").value="";setButtonEdit("treatmentSaveBtn","treatmentCancelBtn",false,"Add treatment","Save changes")}
-function removeTreatment(id){if(!confirmDelete("treatment"))return;state.treatments=state.treatments.filter(x=>x.id!==id);if(editing.treatment===id)cancelTreatmentEdit();persist();renderCare();renderMainLog()}
+function removeTreatment(id){
+  const x=state.treatments.find(v=>v.id===id);if(!x)return;
+  const label=x.type==="Medication"?"medication":x.type==="Vaccination"?"vaccination record":"treatment";
+  if(!confirm(`Remove this ${label} from Frannie’s current list? Its history will remain in Frannie Log.`))return;
+  const title=x.type==="Medication"?"Medication stopped":x.type==="Vaccination"?"Vaccination record removed":"Treatment removed";
+  state.treatmentHistory.unshift({id:uid(),date:todayISO(),title,type:x.type,name:x.name,due:x.due||"",note:x.note||""});
+  state.treatments=state.treatments.filter(v=>v.id!==id);
+  if(editing.treatment===id)cancelTreatmentEdit();persist();renderCare();renderMainLog()
+}
 
 function feedingHistoryEntry(action,item){return{id:uid(),date:todayISO(),action,category:item.category||"Other",brand:item.brand||"",amount:item.amount||"",schedule:item.schedule||"",note:item.note||""}}
 function saveFeeding(){
@@ -174,6 +184,12 @@ function editWeight(id){const x=state.weights.find(v=>v.id===id);if(!x)return;ed
 function cancelWeightEdit(){editing.weight=null;$("weightDate").value=todayISO();$("weightValue").value="";$("weightNote").value="";setButtonEdit("weightSaveBtn","weightCancelBtn",false,"Add weight","Save changes")}
 function removeWeight(id){if(!confirmDelete("weight entry"))return;state.weights=state.weights.filter(x=>x.id!==id);if(editing.weight===id)cancelWeightEdit();persist();renderCare();renderMainLog()}
 
+function saveHeight(){const value=$("heightValue").value.trim();if(!value){alert("Add Frannie’s height at the shoulder.");return}const item={id:editing.height||uid(),date:$("heightDate").value||todayISO(),value,note:$("heightNote").value.trim()};if(editing.height)state.heights=state.heights.map(x=>x.id===editing.height?item:x);else state.heights.unshift(item);persist();cancelHeightEdit();renderCare();renderMainLog()}
+function editHeight(id){const x=state.heights.find(v=>v.id===id);if(!x)return;editing.height=id;$("heightDate").value=x.date||todayISO();$("heightValue").value=x.value;$("heightNote").value=x.note||"";setButtonEdit("heightSaveBtn","heightCancelBtn",true,"Add height","Save changes");$("heightValue").focus()}
+function cancelHeightEdit(){editing.height=null;$("heightDate").value=todayISO();$("heightValue").value="";$("heightNote").value="";setButtonEdit("heightSaveBtn","heightCancelBtn",false,"Add height","Save changes")}
+function removeHeight(id){if(!confirmDelete("height entry"))return;state.heights=state.heights.filter(x=>x.id!==id);if(editing.height===id)cancelHeightEdit();persist();renderCare();renderMainLog()}
+function showMeasurementTab(tab,button){document.querySelectorAll(".measurement-panel").forEach(x=>x.classList.add("hidden"));$(tab+"Panel").classList.remove("hidden");document.querySelectorAll("#measurementTabs button").forEach(x=>x.classList.remove("active"));button.classList.add("active")}
+
 function saveCareNote(){const title=$("careNoteTitle").value.trim(),note=$("careNoteText").value.trim();if(!title&&!note){alert("Add a title or note.");return}const item={id:editing.careNote||uid(),date:$("careNoteDate").value||todayISO(),title:title||"Care note",note};if(editing.careNote)state.careNotes=state.careNotes.map(x=>x.id===editing.careNote?item:x);else state.careNotes.unshift(item);persist();cancelCareNoteEdit();renderCare();renderMainLog()}
 function editCareNote(id){const x=state.careNotes.find(v=>v.id===id);if(!x)return;editing.careNote=id;$("careNoteDate").value=x.date||todayISO();$("careNoteTitle").value=x.title;$("careNoteText").value=x.note||"";setButtonEdit("careNoteSaveBtn","careNoteCancelBtn",true,"Add to timeline","Save changes");$("careNoteTitle").focus()}
 function cancelCareNoteEdit(){editing.careNote=null;$("careNoteDate").value=todayISO();$("careNoteTitle").value="";$("careNoteText").value="";setButtonEdit("careNoteSaveBtn","careNoteCancelBtn",false,"Add to timeline","Save changes")}
@@ -181,11 +197,12 @@ function removeCareNote(id){if(!confirmDelete("care note"))return;state.careNote
 
 function renderTreatments(){$("treatmentList").innerHTML=state.treatments.length?state.treatments.map(x=>{const s=treatmentStatus(x);return`<div class="entry"><div class="entry-top"><div><strong>${esc(x.name)}</strong><small>${esc(x.type)}${x.date?" · Given "+prettyDate(x.date):""}${x.due?" · Next "+prettyDate(x.due):""}</small>${x.note?`<small>${esc(x.note)}</small>`:""}</div><div><span class="status-tag ${s[1]}">${s[0]}</span><br><button class="remove-btn" onclick="editTreatment('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeTreatment('${x.id}')">Delete</button></div></div></div>`}).join(""):"<p>No treatments or vaccinations added yet.</p>"}
 function renderAllergies(){$("allergyList").innerHTML=state.allergies.length?state.allergies.map(x=>`<div class="entry"><div class="entry-top"><strong>${esc(x.text)}</strong><div><button class="remove-btn" onclick="editAllergy('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeAllergy('${x.id}')">Delete</button></div></div></div>`).join(""):"<p>No allergies or cautions added yet.</p>"}
+function renderHeights(){$("heightList").innerHTML=state.heights.length?state.heights.map(x=>`<div class="entry"><div class="entry-top"><div><strong>${esc(x.value)}</strong><small>${prettyDate(x.date)}${x.note?" · "+esc(x.note):""}</small></div><div><button class="remove-btn" onclick="editHeight('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeHeight('${x.id}')">Delete</button></div></div></div>`).join(""):"<p>No height entries yet.</p>"}
 function renderWeights(){$("weightList").innerHTML=state.weights.length?state.weights.map(x=>`<div class="entry"><div class="entry-top"><div><strong>${esc(x.value)}</strong><small>${prettyDate(x.date)}${x.note?" · "+esc(x.note):""}</small></div><div><button class="remove-btn" onclick="editWeight('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeWeight('${x.id}')">Delete</button></div></div></div>`).join(""):"<p>No weight entries yet.</p>"}
-function timelineItems(){const a=[];state.logs.forEach(x=>a.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>a.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>a.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.feedingHistory.forEach(x=>a.push({type:"feeding",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:`Feeding item ${x.action||"updated"}`,detail:[x.category,x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")}));state.careNotes.forEach(x=>a.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||"",id:x.id}));return a.sort((x,y)=>y.dateRaw-x.dateRaw)}
+function timelineItems(){const a=[];state.logs.forEach(x=>a.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>a.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.note?" · "+x.note:"")}));state.treatmentHistory.forEach(x=>a.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:[x.type,x.name,x.note].filter(Boolean).join(" · ")}));state.weights.forEach(x=>a.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.heights.forEach(x=>a.push({type:"height",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Height at shoulder: "+x.value,detail:x.note||""}));state.feedingHistory.forEach(x=>a.push({type:"feeding",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:`Feeding item ${x.action||"updated"}`,detail:[x.category,x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")}));state.careNotes.forEach(x=>a.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||"",id:x.id}));return a.sort((x,y)=>y.dateRaw-x.dateRaw)}
 function renderTimeline(){const a=timelineItems().filter(x=>timelineFilter==="all"||x.type===timelineFilter);$("timelineList").innerHTML=a.length?a.map(x=>`<div class="timeline-item"><div class="timeline-type">${esc(x.type)}</div><strong>${esc(x.title)}</strong><div class="timeline-date">${esc(x.date||"No date")}</div>${x.detail?`<small>${esc(x.detail)}</small>`:""}${x.type==="note"?`<div style="margin-top:7px"><button class="remove-btn" onclick="editCareNote('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeCareNote('${x.id}')">Delete</button></div>`:""}</div>`).join(""):"<p>No timeline entries yet.</p>"}
 function setTimelineFilter(t,b){timelineFilter=t;document.querySelectorAll(".timeline-filter button").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderTimeline()}
-function renderCare(){renderTreatments();renderFeeding();renderAllergies();renderWeights();renderTimeline()}
+function renderCare(){renderTreatments();renderFeeding();renderAllergies();renderWeights();renderHeights();renderTimeline()}
 
 function addQuickLogNote(){const title=$("quickLogTitle").value.trim(),note=$("quickLogText").value.trim();if(!title&&!note){alert("Add a title or note.");return}state.careNotes.unshift({id:uid(),date:$("quickLogDate").value||todayISO(),title:title||"General log note",note});$("quickLogTitle").value="";$("quickLogText").value="";$("quickLogDate").value=todayISO();persist();renderCare();renderMainLog();const msg=$("quickLogSaved");msg.classList.remove("hidden");setTimeout(()=>msg.classList.add("hidden"),2600)}
 function allFrannieEntries(){const e=[];state.logs.forEach(x=>e.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>e.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.due?" · Next due "+prettyDate(x.due):"")+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>e.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.feedingHistory.forEach(x=>e.push({type:"feeding",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:`Feeding item ${x.action||"updated"}`,detail:[x.category,x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")}));state.allergies.forEach(x=>e.push({type:"allergy",dateRaw:new Date((x.date||todayISO())+"T12:00:00").getTime(),date:prettyDate(x.date||todayISO()),title:"Allergy or caution",detail:x.text}));state.careNotes.forEach(x=>e.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||""}));return e.sort((a,b)=>b.dateRaw-a.dateRaw)}
@@ -206,13 +223,13 @@ async function restoreBackup(event){
     const parsed=JSON.parse(text);
     if(!parsed||typeof parsed!=="object")throw new Error("The selected file does not contain backup data.");
     const candidate=parsed.data&&typeof parsed.data==="object"?parsed.data:parsed;
-    const knownBackup=parsed.appId==="frannies-a-good-girl"||parsed.app==="Frannie’s a Good Girl"||["profile","selected","completed","logs","treatments","allergies","weights","careNotes","feeding","feedingItems","feedingHistory"].some(k=>Object.prototype.hasOwnProperty.call(candidate,k));
+    const knownBackup=parsed.appId==="frannies-a-good-girl"||parsed.app==="Frannie’s a Good Girl"||["profile","selected","completed","logs","treatments","treatmentHistory","allergies","weights","heights","careNotes","feeding","feedingItems","feedingHistory"].some(k=>Object.prototype.hasOwnProperty.call(candidate,k));
     if(!knownBackup)throw new Error("This JSON file was not created by Frannie’s a Good Girl.");
     const restored=normalizeState(candidate);
     if(!hasMeaningfulData(restored))throw new Error("The backup does not contain any Frannie information.");
     if(hasMeaningfulData()&&!confirm("Replace the Frannie information currently saved on this device with this backup?"))return;
     state=restored;if(!persist())throw new Error("The restored information could not be saved.");
-    cancelTreatmentEdit();cancelFeedingEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();showScreen("home");alert("Frannie’s backup has been restored.")
+    cancelTreatmentEdit();cancelFeedingEdit();cancelAllergyEdit();cancelWeightEdit();cancelHeightEdit();cancelCareNoteEdit();initializeUI();showScreen("home");alert("Frannie’s backup has been restored.")
   }catch(err){console.error("Restore failed",err);alert(err&&err.message?err.message:"That file could not be restored. Choose a Frannie backup JSON file.")}
   finally{input.value=""}
 }
@@ -312,7 +329,7 @@ function printFrannieLog(mode="letter"){
   document.documentElement.dataset.printMode=mode;
   const cleanup=()=>{delete document.documentElement.dataset.printMode;window.removeEventListener("afterprint",cleanup)};window.addEventListener("afterprint",cleanup);void $("printReport").offsetHeight;window.print()
 }
-function initializeUI(){loadProfile();renderProblems();renderModules();renderCare();renderMainLog();if(!$("treatmentDate").value)$("treatmentDate").value=todayISO();if(!$("weightDate").value)$("weightDate").value=todayISO();if(!$("careNoteDate").value)$("careNoteDate").value=todayISO();if(!$("quickLogDate").value)$("quickLogDate").value=todayISO()}
+function initializeUI(){loadProfile();renderProblems();renderModules();renderCare();renderMainLog();if(!$("treatmentDate").value)$("treatmentDate").value=todayISO();if(!$("weightDate").value)$("weightDate").value=todayISO();if(!$("heightDate").value)$("heightDate").value=todayISO();if(!$("careNoteDate").value)$("careNoteDate").value=todayISO();if(!$("quickLogDate").value)$("quickLogDate").value=todayISO()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
 window.addEventListener("pageshow",()=>{state=Store.load();initializeUI()});
 window.addEventListener("pagehide",()=>{persist()});

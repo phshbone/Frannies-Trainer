@@ -128,11 +128,12 @@
 
   <div class="care-section" style="margin-top:16px">
     <h3>Save, restore, or print</h3>
-    <p class="disclaimer">A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe. On iPhone, the print screen can also be expanded and shared as a PDF.</p>
+    <p class="disclaimer">Use <strong>Share Frannie Log</strong> for the native iPhone share sheet. A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe. The PDF buttons remain available as secondary options.</p>
     <div class="actions">
-      <button class="primary" onclick="downloadBackup()">Save backup</button>
+      <button class="primary" onclick="shareFrannieLog()">Share Frannie Log</button>
+      <button class="secondary" onclick="downloadBackup()">Save backup</button>
       <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore backup</button>
-      <button class="secondary" onclick="printFrannieLog('compact')">Compact phone PDF</button>
+      <button class="secondary" onclick="printFrannieLog('phone')">Phone-style PDF</button>
       <button class="secondary" onclick="printFrannieLog('letter')">Full-page PDF</button>
       <input id="restoreFile" type="file" accept=".json,application/json" class="hidden" onchange="restoreBackup(event)">
     </div>
@@ -188,6 +189,6 @@
 <div class="modal-fallback">The video is streamed from YouTube. If the uploader blocks embedded playback, <a id="youtubeFallback" target="_blank" rel="noopener">open the official video on YouTube</a>.</div>
 </div></div>
 
-<script src="app.js?v=4" defer></script>
+<script src="app.js?v=5" defer></script>
 <section id="printReport" class="print-only"></section></body>
 </html>

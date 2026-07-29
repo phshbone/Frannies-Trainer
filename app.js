@@ -190,10 +190,36 @@ async function restoreBackup(event){
   }catch(err){console.error("Restore failed",err);alert(err&&err.message?err.message:"That file could not be restored. Choose a Frannie backup JSON file.")}
   finally{input.value=""}
 }
-function printFrannieLog(mode="compact"){
+function buildFrannieLogText(){
+  const profile=state.profile||{};
+  const entries=allFrannieEntries();
+  const header=[
+    "Frannie Log",
+    `Frannie and her human, Mollie${profile.age?" · Age "+profile.age:""}${profile.size?" · "+profile.size:""}`
+  ];
+  const lines=entries.length
+    ? entries.map(x=>`${String(x.type).toUpperCase()}\n${x.title}\n${x.date||"No date"}${x.detail?`\n${x.detail}`:""}`)
+    : ["No entries yet."];
+  return [...header, "", ...lines].join("\n\n");
+}
+async function shareFrannieLog(){
+  const text=buildFrannieLogText();
+  if(navigator.share){
+    try{
+      await navigator.share({title:"Frannie Log",text});
+      return;
+    }catch(err){
+      if(err&&err.name==="AbortError")return;
+      console.warn("Share failed",err);
+    }
+  }
+  alert("This device does not support the share sheet here, so the app will open the phone-style PDF instead.");
+  printFrannieLog("phone");
+}
+function printFrannieLog(mode="phone"){
   const entries=allFrannieEntries(),profile=state.profile||{};
   const rows=entries.length?entries.map(x=>`<article><div class="type">${esc(x.type)}</div><h3>${esc(x.title)}</h3><div class="date">${esc(x.date||"No date")}</div>${x.detail?`<p>${esc(x.detail)}</p>`:""}</article>`).join(""):"<p>No entries yet.</p>";
-  $("printReport").innerHTML=`<h1>Frannie Log</h1><p class="print-profile">Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}`;
+  $("printReport").innerHTML=`<section class="print-card"><h1>Frannie Log</h1><p class="print-profile">Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}</section>`;
   document.documentElement.dataset.printMode=mode;
   const cleanup=()=>{delete document.documentElement.dataset.printMode;window.removeEventListener("afterprint",cleanup)};window.addEventListener("afterprint",cleanup);setTimeout(()=>window.print(),100)
 }

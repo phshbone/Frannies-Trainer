@@ -22,7 +22,7 @@ const focusLessonMap={
 
 
 const STORAGE_KEY="franniesGoodGirlStableV1";
-const STORAGE_VERSION=1;
+const STORAGE_VERSION=2;
 const $=id=>document.getElementById(id);
 
 function defaultState(){
@@ -53,8 +53,18 @@ const Store={
     catch(err){console.error("Could not load saved Frannie data",err);return defaultState();}
   },
   save(data){
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(normalizeState(data)));return true;}
-    catch(err){console.error("Could not save Frannie data",err);alert("Frannie’s information could not be saved on this device. Check browser storage settings.");return false;}
+    try{
+      const normalized=normalizeState(data);
+      const serialized=JSON.stringify(normalized);
+      localStorage.setItem(STORAGE_KEY,serialized);
+      const verified=localStorage.getItem(STORAGE_KEY);
+      if(verified!==serialized)throw new Error("Saved data could not be verified");
+      return true;
+    }catch(err){
+      console.error("Could not save Frannie data",err);
+      alert("Frannie’s information could not be saved on this device. Check browser storage settings.");
+      return false;
+    }
   },
   clear(){localStorage.removeItem(STORAGE_KEY);}
 };
@@ -68,6 +78,14 @@ function todayISO(){const d=new Date();const local=new Date(d.getTime()-d.getTim
 function prettyDate(v){if(!v)return"No date";const d=new Date(v+"T12:00:00");return Number.isNaN(d.getTime())?v:d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}
 function setButtonEdit(buttonId,cancelId,isEditing,addText,editText){$(buttonId).textContent=isEditing?editText:addText;$(cancelId).classList.toggle("hidden",!isEditing)}
 function confirmDelete(label){return confirm(`Delete this ${label}? This cannot be undone.`)}
+function hasMeaningfulData(value=state){
+  return Boolean(
+    value.profile || value.feeding ||
+    value.selected?.length || value.completed?.length || value.logs?.length ||
+    value.treatments?.length || value.allergies?.length || value.weights?.length ||
+    value.careNotes?.length || value.feedingHistory?.length
+  );
+}
 
 function renderProblems(){
   const grid=$("problemGrid");grid.innerHTML="";
@@ -91,7 +109,15 @@ function openLesson(i){current=i;const l=lessons[i];$("lessonTitle").textContent
 function rate(b,v){rating=v;document.querySelectorAll("#ratings button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}
 function completeLesson(){if(!state.completed.includes(current))state.completed.push(current);state.logs.unshift({id:uid(),date:new Date().toLocaleString(),lesson:lessons[current].title,rating:rating||"No rating",notes:$("sessionNotes").value.trim()});persist();renderModules();renderLogs();renderMainLog();showScreen("plan")}
 function renderLogs(){$("logList").innerHTML=state.logs.length?state.logs.map(x=>`<div class="log-item"><strong>${esc(x.lesson)}</strong><div class="module-sub">${esc(x.date)} · ${esc(x.rating)}</div>${x.notes?`<p>${esc(x.notes)}</p>`:""}</div>`).join(""):"<p>No sessions logged yet.</p>"}
-function showScreen(id,btn){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));if(btn)btn.classList.add("active");else{const map={home:0,plan:1,care:2,log:3,safety:4};if(map[id]!==undefined)document.querySelectorAll(".nav")[map[id]].classList.add("active")}window.scrollTo({top:0,behavior:"smooth"})}
+function showScreen(id,btn){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  $(id).classList.add("active");
+  document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));
+  if(btn)btn.classList.add("active");
+  else{const map={home:0,plan:1,care:2,log:3,safety:4};if(map[id]!==undefined)document.querySelectorAll(".nav")[map[id]].classList.add("active")}
+  const scroller=document.querySelector(".app");
+  if(scroller){scroller.scrollTop=0;requestAnimationFrame(()=>{scroller.scrollTop=0})}
+}
 function renderTimer(){$("timer").textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0")}
 function startTimer(){if(ticker)return;ticker=setInterval(()=>{if(seconds>0){seconds--;renderTimer()}else{pauseTimer();alert("Session complete. Finish with an easy success if possible.")}},1000)}
 function pauseTimer(){clearInterval(ticker);ticker=null}
@@ -141,12 +167,42 @@ function allFrannieEntries(){const e=[];state.logs.forEach(x=>e.push({type:"trai
 function renderMainLog(){const el=$("mainLogList");if(!el)return;const entries=allFrannieEntries().filter(x=>mainLogFilter==="all"||x.type===mainLogFilter);el.innerHTML=entries.length?entries.map(x=>`<div class="timeline-item"><div class="timeline-type">${esc(x.type)}</div><strong>${esc(x.title)}</strong><div class="timeline-date">${esc(x.date||"No date")}</div>${x.detail?`<small>${esc(x.detail)}</small>`:""}</div>`).join(""):"<p>No entries in this category yet.</p>"}
 function setMainLogFilter(type,btn){mainLogFilter=type;document.querySelectorAll("#mainLogFilters button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderMainLog()}
 
-function downloadBackup(){const payload={app:"Frannie’s a Good Girl",version:STORAGE_VERSION,exportedAt:new Date().toISOString(),data:state};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="frannie-good-girl-backup-"+todayISO()+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function restoreBackup(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result);const restored=normalizeState(parsed.data||parsed);if(!confirm("Replace the information currently saved in this browser with this backup?"))return;state=restored;persist();cancelTreatmentEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();alert("Frannie’s backup has been restored.")}catch(err){alert("That file could not be restored. Choose a Frannie backup JSON file.")}finally{event.target.value=""}};reader.readAsText(file)}
-function printFrannieLog(){const entries=allFrannieEntries(),profile=state.profile||{};const rows=entries.length?entries.map(x=>`<article><div class="type">${esc(x.type)}</div><h3>${esc(x.title)}</h3><div class="date">${esc(x.date||"No date")}</div>${x.detail?`<p>${esc(x.detail)}</p>`:""}</article>`).join(""):"<p>No entries yet.</p>";$("printReport").innerHTML=`<h1>Frannie Log</h1><p>Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}`;setTimeout(()=>window.print(),100)}
+function downloadBackup(){
+  persist();
+  const payload={appId:"frannies-a-good-girl",app:"Frannie’s a Good Girl",schemaVersion:STORAGE_VERSION,exportedAt:new Date().toISOString(),data:normalizeState(state)};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="frannie-good-girl-backup-"+todayISO()+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)
+}
+async function restoreBackup(event){
+  const input=event.target;const file=input.files&&input.files[0];if(!file)return;
+  try{
+    let text=await file.text();text=text.replace(/^\uFEFF/,"").trim();
+    if(!text)throw new Error("The selected file is empty.");
+    const parsed=JSON.parse(text);
+    if(!parsed||typeof parsed!=="object")throw new Error("The selected file does not contain backup data.");
+    const candidate=parsed.data&&typeof parsed.data==="object"?parsed.data:parsed;
+    const knownBackup=parsed.appId==="frannies-a-good-girl"||parsed.app==="Frannie’s a Good Girl"||["profile","selected","completed","logs","treatments","allergies","weights","careNotes","feeding","feedingHistory"].some(k=>Object.prototype.hasOwnProperty.call(candidate,k));
+    if(!knownBackup)throw new Error("This JSON file was not created by Frannie’s a Good Girl.");
+    const restored=normalizeState(candidate);
+    if(!hasMeaningfulData(restored))throw new Error("The backup does not contain any Frannie information.");
+    if(hasMeaningfulData()&&!confirm("Replace the Frannie information currently saved on this device with this backup?"))return;
+    state=restored;if(!persist())throw new Error("The restored information could not be saved.");
+    cancelTreatmentEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();alert("Frannie’s backup has been restored.")
+  }catch(err){console.error("Restore failed",err);alert(err&&err.message?err.message:"That file could not be restored. Choose a Frannie backup JSON file.")}
+  finally{input.value=""}
+}
+function printFrannieLog(mode="compact"){
+  const entries=allFrannieEntries(),profile=state.profile||{};
+  const rows=entries.length?entries.map(x=>`<article><div class="type">${esc(x.type)}</div><h3>${esc(x.title)}</h3><div class="date">${esc(x.date||"No date")}</div>${x.detail?`<p>${esc(x.detail)}</p>`:""}</article>`).join(""):"<p>No entries yet.</p>";
+  $("printReport").innerHTML=`<h1>Frannie Log</h1><p class="print-profile">Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}`;
+  document.documentElement.dataset.printMode=mode;
+  const cleanup=()=>{delete document.documentElement.dataset.printMode;window.removeEventListener("afterprint",cleanup)};window.addEventListener("afterprint",cleanup);setTimeout(()=>window.print(),100)
+}
 function initializeUI(){loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();if(!$("treatmentDate").value)$("treatmentDate").value=todayISO();if(!$("weightDate").value)$("weightDate").value=todayISO();if(!$("careNoteDate").value)$("careNoteDate").value=todayISO();if(!$("quickLogDate").value)$("quickLogDate").value=todayISO()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
 window.addEventListener("pageshow",()=>{state=Store.load();initializeUI()});
+window.addEventListener("pagehide",()=>{persist()});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")persist()});
 window.addEventListener("storage",e=>{if(e.key===STORAGE_KEY){state=Store.load();initializeUI()}});
 initializeUI();
 

@@ -8,17 +8,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Frannie’s a Good Girl">
 <title>Frannie’s a Good Girl</title>
-<link rel="stylesheet" href="styles.css?v=13">
+<link rel="stylesheet" href="styles.css?v=14">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <script>
 (function(){
-  const flag="frannieInstallCurtainCleared";
   const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
-  try{if(standalone)localStorage.setItem(flag,"1");}catch(err){}
-  let cleared=standalone;
-  try{cleared=cleared||localStorage.getItem(flag)==="1";}catch(err){}
-  document.documentElement.classList.add(cleared?"install-cleared":"install-required");
+  document.documentElement.classList.add(standalone?"install-cleared":"install-required");
 })();
 </script>
 </head>
@@ -26,17 +22,15 @@
 
 <div class="install-curtain" id="installCurtain" role="dialog" aria-modal="true" aria-labelledby="installTitle">
   <div class="install-curtain-card">
-    <img class="install-icon" src="assets/icon-192.png" alt="Frannie’s a Good Girl app icon">
-    <div class="eyebrow">A little surprise for Mollie</div>
-    <h2 id="installTitle">Frannie’s app is ready</h2>
-    <p class="install-intro">Add it to your iPhone Home Screen before opening the surprise.</p>
+    <div class="install-lock" aria-hidden="true">●</div>
+    <div class="install-kicker">Frannie’s a Good Girl</div>
+    <h2 id="installTitle">Install to continue</h2>
+    <p class="install-intro">This surprise opens only from its Home Screen icon.</p>
     <ol class="install-steps">
       <li><span class="install-step-number">1</span><span>Tap Safari’s <strong>Share</strong> button.</span></li>
       <li><span class="install-step-number">2</span><span>Scroll down and choose <strong>Add to Home Screen</strong>.</span></li>
-      <li><span class="install-step-number">3</span><span>Tap <strong>Add</strong>, then open the new Frannie icon from the Home Screen.</span></li>
+      <li><span class="install-step-number">3</span><span>Tap <strong>Add</strong>, then leave Safari and open the new icon.</span></li>
     </ol>
-    <p class="install-note">The full app will reveal itself when opened from its new icon.</p>
-    <button class="install-emergency" type="button" onclick="dismissInstallCurtain()">Already installed? Open anyway</button>
   </div>
 </div>
 
@@ -221,6 +215,6 @@
 <div class="modal-fallback">The video is streamed from YouTube. If the uploader blocks embedded playback, <a id="youtubeFallback" target="_blank" rel="noopener">open the official video on YouTube</a>.</div>
 </div></div>
 
-<script src="app.js?v=13" defer></script>
+<script src="app.js?v=14" defer></script>
 <section id="printReport" class="print-only"></section></body>
 </html>

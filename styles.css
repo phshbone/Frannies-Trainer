@@ -191,7 +191,7 @@ body{
   -webkit-overflow-scrolling:auto;
   overscroll-behavior:none;
   scroll-behavior:auto;
-  padding:16px 14px calc(110px + env(safe-area-inset-bottom)) !important;
+  padding:calc(20px + env(safe-area-inset-top)) 14px calc(110px + env(safe-area-inset-bottom)) !important;
   margin:0;
 }
 .bottom-nav{

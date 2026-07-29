@@ -22,11 +22,11 @@ const focusLessonMap={
 
 
 const STORAGE_KEY="franniesGoodGirlStableV1";
-const STORAGE_VERSION=2;
+const STORAGE_VERSION=3;
 const $=id=>document.getElementById(id);
 
 function defaultState(){
-  return {version:STORAGE_VERSION,profile:null,selected:[],completed:[],logs:[],treatments:[],allergies:[],weights:[],careNotes:[],feeding:null,feedingHistory:[]};
+  return {version:STORAGE_VERSION,profile:null,selected:[],completed:[],logs:[],treatments:[],allergies:[],weights:[],careNotes:[],feeding:null,feedingItems:[],feedingHistory:[]};
 }
 function normalizeState(raw){
   const base=defaultState();
@@ -43,7 +43,16 @@ function normalizeState(raw){
     allergies:Array.isArray(raw.allergies)?raw.allergies:[],
     weights:Array.isArray(raw.weights)?raw.weights:[],
     careNotes:Array.isArray(raw.careNotes)?raw.careNotes:[],
-    feeding:raw.feeding&&typeof raw.feeding==="object"?raw.feeding:null,
+    feeding:null,
+    feedingItems:Array.isArray(raw.feedingItems)?raw.feedingItems:(raw.feeding&&typeof raw.feeding==="object"?[{
+      id:raw.feeding.id||"feeding-legacy",
+      category:raw.feeding.category||"Main meal",
+      brand:raw.feeding.brand||"",
+      amount:raw.feeding.amount||"",
+      schedule:raw.feeding.schedule||"",
+      note:raw.feeding.note||"",
+      addedAt:raw.feeding.updatedAt||todayISO()
+    }]:[]),
     feedingHistory:Array.isArray(raw.feedingHistory)?raw.feedingHistory:[]
   };
 }
@@ -70,7 +79,7 @@ const Store={
 };
 let state=Store.load();
 let current=0,rating="",seconds=300,ticker=null,timelineFilter="all",mainLogFilter="all";
-let editing={treatment:null,allergy:null,weight:null,careNote:null};
+let editing={treatment:null,feeding:null,allergy:null,weight:null,careNote:null};
 function persist(){return Store.save(state)}
 function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
@@ -80,7 +89,7 @@ function setButtonEdit(buttonId,cancelId,isEditing,addText,editText){$(buttonId)
 function confirmDelete(label){return confirm(`Delete this ${label}? This cannot be undone.`)}
 function hasMeaningfulData(value=state){
   return Boolean(
-    value.profile || value.feeding ||
+    value.profile || value.feeding || value.feedingItems?.length ||
     value.selected?.length || value.completed?.length || value.logs?.length ||
     value.treatments?.length || value.allergies?.length || value.weights?.length ||
     value.careNotes?.length || value.feedingHistory?.length
@@ -134,9 +143,26 @@ function editTreatment(id){const x=state.treatments.find(v=>v.id===id);if(!x)ret
 function cancelTreatmentEdit(){editing.treatment=null;$("treatmentType").value="Vaccination";$("treatmentName").value="";$("treatmentDate").value=todayISO();$("treatmentDue").value="";$("treatmentNote").value="";setButtonEdit("treatmentSaveBtn","treatmentCancelBtn",false,"Add treatment","Save changes")}
 function removeTreatment(id){if(!confirmDelete("treatment"))return;state.treatments=state.treatments.filter(x=>x.id!==id);if(editing.treatment===id)cancelTreatmentEdit();persist();renderCare();renderMainLog()}
 
-function saveFeeding(){const feeding={brand:$("foodBrand").value.trim(),amount:$("foodAmount").value.trim(),schedule:$("foodSchedule").value.trim(),note:$("foodNote").value.trim(),updatedAt:todayISO()};if(![feeding.brand,feeding.amount,feeding.schedule,feeding.note].some(Boolean)){alert("Add feeding information before saving.");return}state.feeding=feeding;state.feedingHistory.unshift({id:uid(),date:todayISO(),...feeding});persist();renderFeeding();renderMainLog()}
-function clearFeeding(){if(!state.feeding)return;if(!confirmDelete("feeding record"))return;state.feeding=null;persist();renderFeeding();renderMainLog()}
-function renderFeeding(){const x=state.feeding||{};$("foodBrand").value=x.brand||"";$("foodAmount").value=x.amount||"";$("foodSchedule").value=x.schedule||"";$("foodNote").value=x.note||"";const has=Object.values(x).some(Boolean);$("feedingSaved").classList.toggle("hidden",!has);if(has)$("feedingSaved").textContent=`Current routine: ${x.brand||"Food not named"}${x.amount?" · "+x.amount:""}${x.schedule?" · "+x.schedule:""}`}
+function feedingHistoryEntry(action,item){return{id:uid(),date:todayISO(),action,category:item.category||"Other",brand:item.brand||"",amount:item.amount||"",schedule:item.schedule||"",note:item.note||""}}
+function saveFeeding(){
+  const brand=$("foodBrand").value.trim();
+  if(!brand){alert("Add the food, treat, chew, or supplement name.");return}
+  const item={id:editing.feeding||uid(),category:$("foodCategory").value,brand,amount:$("foodAmount").value.trim(),schedule:$("foodSchedule").value.trim(),note:$("foodNote").value.trim(),addedAt:todayISO()};
+  if(editing.feeding){
+    const previous=state.feedingItems.find(x=>x.id===editing.feeding);
+    item.addedAt=previous?.addedAt||todayISO();
+    state.feedingItems=state.feedingItems.map(x=>x.id===editing.feeding?item:x);
+    state.feedingHistory.unshift(feedingHistoryEntry("updated",item));
+  }else{
+    state.feedingItems.unshift(item);
+    state.feedingHistory.unshift(feedingHistoryEntry("added",item));
+  }
+  persist();cancelFeedingEdit();renderCare();renderMainLog()
+}
+function editFeeding(id){const x=state.feedingItems.find(v=>v.id===id);if(!x)return;editing.feeding=id;$("foodCategory").value=x.category||"Other";$("foodBrand").value=x.brand||"";$("foodAmount").value=x.amount||"";$("foodSchedule").value=x.schedule||"";$("foodNote").value=x.note||"";setButtonEdit("feedingSaveBtn","feedingCancelBtn",true,"Add food or treat","Save changes");$("foodBrand").focus()}
+function cancelFeedingEdit(){editing.feeding=null;$("foodCategory").value="Main meal";$("foodBrand").value="";$("foodAmount").value="";$("foodSchedule").value="";$("foodNote").value="";setButtonEdit("feedingSaveBtn","feedingCancelBtn",false,"Add food or treat","Save changes")}
+function removeFeeding(id){const x=state.feedingItems.find(v=>v.id===id);if(!x)return;if(!confirm("Remove this item from Frannie’s current feeding list? Its history will remain in Frannie Log."))return;state.feedingItems=state.feedingItems.filter(v=>v.id!==id);state.feedingHistory.unshift(feedingHistoryEntry("removed",x));if(editing.feeding===id)cancelFeedingEdit();persist();renderCare();renderMainLog()}
+function renderFeeding(){const el=$("feedingList");el.innerHTML=state.feedingItems.length?state.feedingItems.map(x=>`<div class="entry"><div class="entry-top"><div><span class="status-tag status-ongoing">${esc(x.category||"Other")}</span><strong style="display:block;margin-top:6px">${esc(x.brand)}</strong>${x.amount?`<small>Amount: ${esc(x.amount)}</small>`:""}${x.schedule?`<small>When: ${esc(x.schedule)}</small>`:""}${x.note?`<small>${esc(x.note)}</small>`:""}</div><div><button class="remove-btn" onclick="editFeeding('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeFeeding('${x.id}')">Delete</button></div></div></div>`).join(""):"<p>No foods, treats, chews, or supplements added yet.</p>"}
 
 function saveAllergy(){const text=$("allergyText").value.trim();if(!text){alert("Add an allergy or caution.");return}const item={id:editing.allergy||uid(),date:editing.allergy?(state.allergies.find(x=>x.id===editing.allergy)?.date||todayISO()):todayISO(),text};if(editing.allergy)state.allergies=state.allergies.map(x=>x.id===editing.allergy?item:x);else state.allergies.unshift(item);persist();cancelAllergyEdit();renderCare();renderMainLog()}
 function editAllergy(id){const x=state.allergies.find(v=>v.id===id);if(!x)return;editing.allergy=id;$("allergyText").value=x.text;setButtonEdit("allergySaveBtn","allergyCancelBtn",true,"Add caution","Save changes");$("allergyText").focus()}
@@ -156,13 +182,13 @@ function removeCareNote(id){if(!confirmDelete("care note"))return;state.careNote
 function renderTreatments(){$("treatmentList").innerHTML=state.treatments.length?state.treatments.map(x=>{const s=treatmentStatus(x);return`<div class="entry"><div class="entry-top"><div><strong>${esc(x.name)}</strong><small>${esc(x.type)}${x.date?" · Given "+prettyDate(x.date):""}${x.due?" · Next "+prettyDate(x.due):""}</small>${x.note?`<small>${esc(x.note)}</small>`:""}</div><div><span class="status-tag ${s[1]}">${s[0]}</span><br><button class="remove-btn" onclick="editTreatment('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeTreatment('${x.id}')">Delete</button></div></div></div>`}).join(""):"<p>No treatments or vaccinations added yet.</p>"}
 function renderAllergies(){$("allergyList").innerHTML=state.allergies.length?state.allergies.map(x=>`<div class="entry"><div class="entry-top"><strong>${esc(x.text)}</strong><div><button class="remove-btn" onclick="editAllergy('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeAllergy('${x.id}')">Delete</button></div></div></div>`).join(""):"<p>No allergies or cautions added yet.</p>"}
 function renderWeights(){$("weightList").innerHTML=state.weights.length?state.weights.map(x=>`<div class="entry"><div class="entry-top"><div><strong>${esc(x.value)}</strong><small>${prettyDate(x.date)}${x.note?" · "+esc(x.note):""}</small></div><div><button class="remove-btn" onclick="editWeight('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeWeight('${x.id}')">Delete</button></div></div></div>`).join(""):"<p>No weight entries yet.</p>"}
-function timelineItems(){const a=[];state.logs.forEach(x=>a.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>a.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>a.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.careNotes.forEach(x=>a.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||"",id:x.id}));return a.sort((x,y)=>y.dateRaw-x.dateRaw)}
+function timelineItems(){const a=[];state.logs.forEach(x=>a.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>a.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>a.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.feedingHistory.forEach(x=>a.push({type:"feeding",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:`Feeding item ${x.action||"updated"}`,detail:[x.category,x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")}));state.careNotes.forEach(x=>a.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||"",id:x.id}));return a.sort((x,y)=>y.dateRaw-x.dateRaw)}
 function renderTimeline(){const a=timelineItems().filter(x=>timelineFilter==="all"||x.type===timelineFilter);$("timelineList").innerHTML=a.length?a.map(x=>`<div class="timeline-item"><div class="timeline-type">${esc(x.type)}</div><strong>${esc(x.title)}</strong><div class="timeline-date">${esc(x.date||"No date")}</div>${x.detail?`<small>${esc(x.detail)}</small>`:""}${x.type==="note"?`<div style="margin-top:7px"><button class="remove-btn" onclick="editCareNote('${x.id}')">Edit</button> <button class="remove-btn" onclick="removeCareNote('${x.id}')">Delete</button></div>`:""}</div>`).join(""):"<p>No timeline entries yet.</p>"}
 function setTimelineFilter(t,b){timelineFilter=t;document.querySelectorAll(".timeline-filter button").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderTimeline()}
 function renderCare(){renderTreatments();renderFeeding();renderAllergies();renderWeights();renderTimeline()}
 
 function addQuickLogNote(){const title=$("quickLogTitle").value.trim(),note=$("quickLogText").value.trim();if(!title&&!note){alert("Add a title or note.");return}state.careNotes.unshift({id:uid(),date:$("quickLogDate").value||todayISO(),title:title||"General log note",note});$("quickLogTitle").value="";$("quickLogText").value="";$("quickLogDate").value=todayISO();persist();renderCare();renderMainLog();const msg=$("quickLogSaved");msg.classList.remove("hidden");setTimeout(()=>msg.classList.add("hidden"),2600)}
-function allFrannieEntries(){const e=[];state.logs.forEach(x=>e.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>e.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.due?" · Next due "+prettyDate(x.due):"")+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>e.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.feedingHistory.forEach(x=>e.push({type:"feeding",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Feeding information updated",detail:[x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")}));state.allergies.forEach(x=>e.push({type:"allergy",dateRaw:new Date((x.date||todayISO())+"T12:00:00").getTime(),date:prettyDate(x.date||todayISO()),title:"Allergy or caution",detail:x.text}));state.careNotes.forEach(x=>e.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||""}));return e.sort((a,b)=>b.dateRaw-a.dateRaw)}
+function allFrannieEntries(){const e=[];state.logs.forEach(x=>e.push({type:"training",dateRaw:new Date(x.date).getTime()||0,date:x.date,title:x.lesson,detail:x.rating+(x.notes?" · "+x.notes:"")}));state.treatments.forEach(x=>e.push({type:"treatment",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.name,detail:x.type+(x.due?" · Next due "+prettyDate(x.due):"")+(x.note?" · "+x.note:"")}));state.weights.forEach(x=>e.push({type:"weight",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:"Weight: "+x.value,detail:x.note||""}));state.feedingHistory.forEach(x=>e.push({type:"feeding",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:`Feeding item ${x.action||"updated"}`,detail:[x.category,x.brand,x.amount,x.schedule,x.note].filter(Boolean).join(" · ")}));state.allergies.forEach(x=>e.push({type:"allergy",dateRaw:new Date((x.date||todayISO())+"T12:00:00").getTime(),date:prettyDate(x.date||todayISO()),title:"Allergy or caution",detail:x.text}));state.careNotes.forEach(x=>e.push({type:"note",dateRaw:new Date((x.date||"1970-01-01")+"T12:00:00").getTime(),date:prettyDate(x.date),title:x.title,detail:x.note||""}));return e.sort((a,b)=>b.dateRaw-a.dateRaw)}
 function renderMainLog(){const el=$("mainLogList");if(!el)return;const entries=allFrannieEntries().filter(x=>mainLogFilter==="all"||x.type===mainLogFilter);el.innerHTML=entries.length?entries.map(x=>`<div class="timeline-item"><div class="timeline-type">${esc(x.type)}</div><strong>${esc(x.title)}</strong><div class="timeline-date">${esc(x.date||"No date")}</div>${x.detail?`<small>${esc(x.detail)}</small>`:""}</div>`).join(""):"<p>No entries in this category yet.</p>"}
 function setMainLogFilter(type,btn){mainLogFilter=type;document.querySelectorAll("#mainLogFilters button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderMainLog()}
 
@@ -180,13 +206,13 @@ async function restoreBackup(event){
     const parsed=JSON.parse(text);
     if(!parsed||typeof parsed!=="object")throw new Error("The selected file does not contain backup data.");
     const candidate=parsed.data&&typeof parsed.data==="object"?parsed.data:parsed;
-    const knownBackup=parsed.appId==="frannies-a-good-girl"||parsed.app==="Frannie’s a Good Girl"||["profile","selected","completed","logs","treatments","allergies","weights","careNotes","feeding","feedingHistory"].some(k=>Object.prototype.hasOwnProperty.call(candidate,k));
+    const knownBackup=parsed.appId==="frannies-a-good-girl"||parsed.app==="Frannie’s a Good Girl"||["profile","selected","completed","logs","treatments","allergies","weights","careNotes","feeding","feedingItems","feedingHistory"].some(k=>Object.prototype.hasOwnProperty.call(candidate,k));
     if(!knownBackup)throw new Error("This JSON file was not created by Frannie’s a Good Girl.");
     const restored=normalizeState(candidate);
     if(!hasMeaningfulData(restored))throw new Error("The backup does not contain any Frannie information.");
     if(hasMeaningfulData()&&!confirm("Replace the Frannie information currently saved on this device with this backup?"))return;
     state=restored;if(!persist())throw new Error("The restored information could not be saved.");
-    cancelTreatmentEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();showScreen("home");alert("Frannie’s backup has been restored.")
+    cancelTreatmentEdit();cancelFeedingEdit();cancelAllergyEdit();cancelWeightEdit();cancelCareNoteEdit();initializeUI();showScreen("home");alert("Frannie’s backup has been restored.")
   }catch(err){console.error("Restore failed",err);alert(err&&err.message?err.message:"That file could not be restored. Choose a Frannie backup JSON file.")}
   finally{input.value=""}
 }

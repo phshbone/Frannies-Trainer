@@ -882,7 +882,7 @@ async function saveOrShareRecords(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   flashSaved("Saved to Files");
 }
-async function initializeApp(){
+async async function initializeApp(){
   await loadSavedState();
   loadProfile();
   renderProblems();
@@ -890,6 +890,8 @@ async function initializeApp(){
   renderLogs();
   renderCare();
   renderMainLog();
+  const careCount=(state.treatments?.length||0)+(state.allergies?.length||0)+(state.weights?.length||0)+(state.careNotes?.length||0)+(state.feedingHistory?.length||0);
+  if(careCount>0)flashSaved("Saved care data restored");
   restoreDrafts();
   attachDraftAutosave();
   autoSaveCommittedFields();
@@ -933,7 +935,10 @@ document.addEventListener("visibilitychange",()=>{
 });
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});
-initializeApp();
+initializeApp().catch(err=>{
+  console.error("Frannie app startup failed:",err);
+  alert("The app could not reload its saved information. Your stored data has not been erased.");
+});
 </script>
 <section id="printReport" class="print-only"></section></body>
 </html>

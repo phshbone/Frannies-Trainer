@@ -209,6 +209,19 @@ body{
   .app{height:100vh;min-height:100vh}
 }
 
+
+.persistence-status{
+  position:fixed;z-index:10000;right:10px;
+  bottom:calc(92px + env(safe-area-inset-bottom));
+  padding:7px 10px;border-radius:999px;
+  background:rgba(33,25,29,.92);color:#f7e9ed;
+  border:1px solid rgba(255,255,255,.15);
+  font-size:.68rem;font-weight:900;
+  opacity:0;transform:translateY(6px);
+  transition:.2s;pointer-events:none;
+}
+.persistence-status.show{opacity:1;transform:none}
+
 </style>
 </head>
 <body>
@@ -372,6 +385,7 @@ body{
 <footer>Personal-use prototype. Not affiliated with or endorsed by Cesar Millan.</footer>
 </div>
 
+<div id="persistenceStatus" class="persistence-status" role="status">Saved on this device</div>
 <nav class="bottom-nav" style="grid-template-columns:repeat(5,1fr)">
 <button class="nav active" onclick="showScreen('home',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Home</span></button>
 <button class="nav" onclick="showScreen('plan',this)"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="16" cy="26" rx="6" ry="8"/><ellipse cx="28" cy="18" rx="6" ry="8"/><ellipse cx="40" cy="18" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></g></svg><span>Plan</span></button>
@@ -409,11 +423,60 @@ const focusLessonMap={
   "Separation distress":[0]
 };
 
-let state=JSON.parse(localStorage.getItem("frannieGoodGirl")||"{}");
+
+const STORAGE_KEY="frannieGoodGirl";
+const DRAFT_KEY="frannieGoodGirlDrafts";
+let saveFlashTimer=null;
+
+function flashSaved(message="Saved on this device"){
+  const el=document.getElementById("persistenceStatus");
+  if(!el)return;
+  el.textContent=message;
+  el.classList.add("show");
+  clearTimeout(saveFlashTimer);
+  saveFlashTimer=setTimeout(()=>el.classList.remove("show"),1800);
+}
+
+function openFrannieDB(){
+  return new Promise((resolve,reject)=>{
+    if(!("indexedDB" in window)){resolve(null);return}
+    const req=indexedDB.open("FrannieGoodGirlDB",1);
+    req.onupgradeneeded=()=>req.result.createObjectStore("app");
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbWrite(value){
+  try{
+    const db=await openFrannieDB();
+    if(!db)return;
+    const tx=db.transaction("app","readwrite");
+    tx.objectStore("app").put(value,STORAGE_KEY);
+  }catch(e){}
+}
+async function idbRead(){
+  try{
+    const db=await openFrannieDB();
+    if(!db)return null;
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction("app","readonly");
+      const req=tx.objectStore("app").get(STORAGE_KEY);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error);
+    });
+  }catch(e){return null}
+}
+
+let state=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
 state.selected=state.selected||[];state.completed=state.completed||[];state.logs=state.logs||[];state.treatments=state.treatments||[];state.allergies=state.allergies||[];state.weights=state.weights||[];state.careNotes=state.careNotes||[];state.feeding=state.feeding||{};state.feedingHistory=state.feedingHistory||[];
 let current=0,rating="",seconds=300,ticker=null;
 
-function save(){localStorage.setItem("frannieGoodGirl",JSON.stringify(state))}
+function save(showNotice=false){
+  const serialized=JSON.stringify(state);
+  localStorage.setItem(STORAGE_KEY,serialized);
+  idbWrite(state);
+  if(showNotice)flashSaved();
+}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function renderProblems(){
   problemGrid.innerHTML="";
@@ -462,7 +525,7 @@ function clearFocusAreas(){
 }
 function saveProfile(){
   state.profile={name:dogName.value,age:dogAge.value,size:dogSize.value,goal:mainGoal.value};
-  save();
+  save(true);
   heroStatus.textContent="Profile saved. Good girl operations may begin.";
   const msg=document.getElementById("profileSaved");
   msg.classList.remove("hidden");
@@ -501,7 +564,10 @@ function startTimer(){if(ticker)return;ticker=setInterval(()=>{if(seconds>0){sec
 function pauseTimer(){clearInterval(ticker);ticker=null} function resetTimer(){pauseTimer();seconds=lessons[current].minutes*60;renderTimer()}
 function openVideo(){let l=lessons[current];modalTitle.textContent=l.videoTitle;youtubeFallback.href=`https://www.youtube.com/watch?v=${l.videoId}`;videoFrame.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${l.videoId}?autoplay=1&rel=0&playsinline=1" title="${esc(l.videoTitle)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;videoModal.classList.add("open");document.body.style.overflow="hidden"}
 function closeVideo(){videoModal.classList.remove("open");videoFrame.innerHTML="";document.body.style.overflow=""} function modalBackdrop(e){if(e.target===videoModal)closeVideo()}
-function resetApp(){if(confirm("Erase Frannie’s saved profile, progress and logs?")){localStorage.removeItem("frannieGoodGirl");location.reload()}}
+function resetApp(){if(confirm("Erase Frannie’s saved profile, progress and logs?")){localStorage.removeItem(STORAGE_KEY);
+localStorage.removeItem(DRAFT_KEY);
+openFrannieDB().then(db=>{if(db){const tx=db.transaction("app","readwrite");tx.objectStore("app").delete(STORAGE_KEY)}});
+location.reload()}}
 function dismissSplash(){
   document.getElementById("splashScreen").classList.add("hide");
   sessionStorage.setItem("frannieSplashSeen","1");
@@ -514,7 +580,7 @@ let timelineFilter="all";
 function todayISO(){return new Date().toISOString().slice(0,10)}
 function prettyDate(v){if(!v)return"No date";return new Date(v+"T12:00:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}
 function treatmentStatus(x){if(x.type==="Medication"&&!x.due)return["Ongoing","status-ongoing"];if(!x.due)return["Given","status-given"];const d=Math.ceil((new Date(x.due+"T12:00:00")-new Date(todayISO()+"T12:00:00"))/86400000);return d<0?["Overdue","status-overdue"]:d<=30?["Due soon","status-due"]:["Given","status-given"]}
-function addTreatment(){const n=treatmentName.value.trim();if(!n){alert("Add a treatment or vaccination name.");return}state.treatments.unshift({id:Date.now(),type:treatmentType.value,name:n,date:treatmentDate.value,due:treatmentDue.value,note:treatmentNote.value.trim()});treatmentName.value=treatmentDue.value=treatmentNote.value="";save();renderCare();renderMainLog()}
+function addTreatment(){const n=treatmentName.value.trim();if(!n){alert("Add a treatment or vaccination name.");return}state.treatments.unshift({id:Date.now(),type:treatmentType.value,name:n,date:treatmentDate.value,due:treatmentDue.value,note:treatmentNote.value.trim()});treatmentName.value=treatmentDue.value=treatmentNote.value="";clearDraftFields(["treatmentName","treatmentDue","treatmentNote"]);save(true);renderCare();renderMainLog()}
 function removeTreatment(id){state.treatments=state.treatments.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
 function saveFeeding(){
   const next={brand:foodBrand.value.trim(),amount:foodAmount.value.trim(),schedule:foodSchedule.value.trim(),note:foodNote.value.trim()};
@@ -523,13 +589,13 @@ function saveFeeding(){
   if(JSON.stringify(next)!==before && Object.values(next).some(Boolean)){
     state.feedingHistory.unshift({id:Date.now(),date:todayISO(),...next});
   }
-  save();renderCare();renderMainLog();
+  save(true);renderCare();renderMainLog();
 }
-function addAllergy(){const v=allergyText.value.trim();if(!v){alert("Add an allergy or caution.");return}state.allergies.unshift({id:Date.now(),date:todayISO(),text:v});allergyText.value="";save();renderCare();renderMainLog()}
+function addAllergy(){const v=allergyText.value.trim();if(!v){alert("Add an allergy or caution.");return}state.allergies.unshift({id:Date.now(),date:todayISO(),text:v});allergyText.value="";clearDraftFields(["allergyText"]);save(true);renderCare();renderMainLog()}
 function removeAllergy(id){state.allergies=state.allergies.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
-function addWeight(){const v=weightValue.value.trim();if(!v){alert("Add Frannie’s weight.");return}state.weights.unshift({id:Date.now(),date:weightDate.value||todayISO(),value:v,note:weightNote.value.trim()});weightValue.value=weightNote.value="";save();renderCare();renderMainLog()}
+function addWeight(){const v=weightValue.value.trim();if(!v){alert("Add Frannie’s weight.");return}state.weights.unshift({id:Date.now(),date:weightDate.value||todayISO(),value:v,note:weightNote.value.trim()});weightValue.value=weightNote.value="";clearDraftFields(["weightValue","weightNote"]);save(true);renderCare();renderMainLog()}
 function removeWeight(id){state.weights=state.weights.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
-function addCareNote(){const t=careNoteTitle.value.trim(),n=careNoteText.value.trim();if(!t&&!n){alert("Add a title or note.");return}state.careNotes.unshift({id:Date.now(),date:careNoteDate.value||todayISO(),title:t||"Care note",note:n});careNoteTitle.value=careNoteText.value="";save();renderCare();renderMainLog()}
+function addCareNote(){const t=careNoteTitle.value.trim(),n=careNoteText.value.trim();if(!t&&!n){alert("Add a title or note.");return}state.careNotes.unshift({id:Date.now(),date:careNoteDate.value||todayISO(),title:t||"Care note",note:n});careNoteTitle.value=careNoteText.value="";clearDraftFields(["careNoteTitle","careNoteText"]);save(true);renderCare();renderMainLog()}
 function removeCareNote(id){state.careNotes=state.careNotes.filter(x=>x.id!==id);save();renderCare();renderMainLog()}
 function renderFeeding(){foodBrand.value=state.feeding.brand||"";foodAmount.value=state.feeding.amount||"";foodSchedule.value=state.feeding.schedule||"";foodNote.value=state.feeding.note||"";const h=Object.values(state.feeding).some(Boolean);feedingSaved.classList.toggle("hidden",!h);if(h)feedingSaved.textContent=`Current routine: ${state.feeding.brand||"Food not named"}${state.feeding.amount?" · "+state.feeding.amount:""}${state.feeding.schedule?" · "+state.feeding.schedule:""}`}
 function renderTreatments(){treatmentList.innerHTML=state.treatments.length?state.treatments.map(x=>{const s=treatmentStatus(x);return`<div class="entry"><div class="entry-top"><div><strong>${esc(x.name)}</strong><small>${esc(x.type)}${x.date?" · Given "+prettyDate(x.date):""}${x.due?" · Next "+prettyDate(x.due):""}</small>${x.note?`<small>${esc(x.note)}</small>`:""}</div><div><span class="status-tag ${s[1]}">${s[0]}</span><br><button class="remove-btn" onclick="removeTreatment(${x.id})">Remove</button></div></div></div>`}).join(""):"<p>No treatments or vaccinations added yet.</p>"}
@@ -547,7 +613,7 @@ function addQuickLogNote(){
   if(!title&&!note){alert("Add a title or note.");return}
   state.careNotes.unshift({id:Date.now(),date:quickLogDate.value||todayISO(),title:title||"General log note",note});
   quickLogTitle.value="";quickLogText.value="";quickLogDate.value=todayISO();
-  save();renderCare();renderMainLog();
+  save(true);renderCare();renderMainLog();
   const msg=document.getElementById("quickLogSaved");msg.classList.remove("hidden");setTimeout(()=>msg.classList.add("hidden"),2600);
 }
 
@@ -664,7 +730,11 @@ function restoreBackup(event){
       state.feeding=state.feeding||{};
       state.feedingHistory=state.feedingHistory||[];
       save();
-      loadProfile();renderProblems();renderModules();renderLogs();renderCare();renderMainLog();renderMainLog();
+      normalizeState();
+rerenderAll();
+restoreDrafts();
+attachAutoSave();
+recoverFromIndexedDB();renderMainLog();
       alert("Frannie’s backup has been restored.");
     }catch(err){
       alert("That file could not be restored. Choose a Frannie backup JSON file.");
@@ -682,6 +752,79 @@ function printFrannieLog(){
   const report=document.getElementById("printReport");
   report.innerHTML=`<h1>Frannie Log</h1><p>Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}`;
   setTimeout(()=>window.print(),100);
+}
+
+
+const draftFieldIds=[
+  "dogName","dogAge","dogSize","mainGoal",
+  "treatmentType","treatmentName","treatmentDate","treatmentDue","treatmentNote",
+  "foodBrand","foodAmount","foodSchedule","foodNote",
+  "allergyText","weightDate","weightValue","weightNote",
+  "careNoteDate","careNoteTitle","careNoteText",
+  "quickLogDate","quickLogTitle","quickLogText","sessionNotes"
+];
+
+function readDrafts(){
+  try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||"{}")}catch(e){return {}}
+}
+function saveDraftField(el){
+  const drafts=readDrafts();
+  drafts[el.id]=el.value;
+  localStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));
+  flashSaved("Draft saved");
+}
+function restoreDrafts(){
+  const drafts=readDrafts();
+  draftFieldIds.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el || drafts[id]===undefined)return;
+    /* Do not overwrite committed profile/care values already restored from state. */
+    if(el.value==="")el.value=drafts[id];
+  });
+}
+function clearDraftFields(ids){
+  const drafts=readDrafts();
+  ids.forEach(id=>delete drafts[id]);
+  localStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));
+}
+function attachAutoSave(){
+  draftFieldIds.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener("input",()=>saveDraftField(el));
+    el.addEventListener("change",()=>saveDraftField(el));
+  });
+}
+
+async function recoverFromIndexedDB(){
+  const backup=await idbRead();
+  const localHasData=state && Object.keys(state).length>0;
+  if(!localHasData && backup && Object.keys(backup).length){
+    state=backup;
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    normalizeState();
+    rerenderAll();
+    flashSaved("Saved data restored");
+  }
+}
+function normalizeState(){
+  state.selected=state.selected||[];
+  state.completed=state.completed||[];
+  state.logs=state.logs||[];
+  state.treatments=state.treatments||[];
+  state.allergies=state.allergies||[];
+  state.weights=state.weights||[];
+  state.careNotes=state.careNotes||[];
+  state.feeding=state.feeding||{};
+  state.feedingHistory=state.feedingHistory||[];
+}
+function rerenderAll(){
+  loadProfile();
+  renderProblems();
+  renderModules();
+  renderLogs();
+  renderCare();
+  renderMainLog();
 }
 
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});

@@ -100,8 +100,8 @@ function openVideo(){const l=lessons[current];$("modalTitle").textContent=l.vide
 function closeVideo(){$("videoModal").classList.remove("open");$("videoFrame").innerHTML="";document.body.style.overflow=""}
 function modalBackdrop(e){if(e.target===$("videoModal"))closeVideo()}
 function resetApp(){if(confirm("Erase Frannie’s saved profile, progress and logs?")){Store.clear();location.reload()}}
-function dismissSplash(){$("splash").classList.add("hidden");sessionStorage.setItem("frannieSplashSeen","1")}
-if(sessionStorage.getItem("frannieSplashSeen")==="1")$("splash").classList.add("hidden");
+function dismissSplash(){const splash=$("splashScreen");if(!splash)return;splash.classList.add("hide");splash.setAttribute("aria-hidden","true");sessionStorage.setItem("frannieSplashSeen","1")}
+if(sessionStorage.getItem("frannieSplashSeen")==="1"){const splash=$("splashScreen");if(splash){splash.classList.add("hide");splash.setAttribute("aria-hidden","true")}}
 
 function treatmentStatus(x){if(x.type==="Medication"&&!x.due)return["Ongoing","status-ongoing"];if(!x.due)return["Given","status-given"];const d=Math.ceil((new Date(x.due+"T12:00:00")-new Date(todayISO()+"T12:00:00"))/86400000);return d<0?["Overdue","status-overdue"]:d<=30?["Due soon","status-due"]:["Given","status-given"]}
 function saveTreatment(){const name=$("treatmentName").value.trim();if(!name){alert("Add a treatment or vaccination name.");return}const item={id:editing.treatment||uid(),type:$("treatmentType").value,name,date:$("treatmentDate").value,due:$("treatmentDue").value,note:$("treatmentNote").value.trim()};if(editing.treatment)state.treatments=state.treatments.map(x=>x.id===editing.treatment?item:x);else state.treatments.unshift(item);persist();cancelTreatmentEdit();renderCare();renderMainLog()}

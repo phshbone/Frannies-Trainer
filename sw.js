@@ -1,9 +1,9 @@
-const CACHE_NAME = 'frannies-good-girl-v1';
+const CACHE_NAME = 'frannies-good-girl-v2';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
-  './app.js',
+  './app.js?v=2',
   './manifest.json',
   './assets/frannie-background.webp',
   './assets/frannie-photo.webp',

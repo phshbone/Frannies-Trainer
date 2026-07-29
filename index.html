@@ -127,14 +127,13 @@
   <div id="mainLogList"></div>
 
   <div class="care-section" style="margin-top:16px">
-    <h3>Save, restore, or print</h3>
-    <p class="disclaimer">Use <strong>Share Frannie Log</strong> for the native iPhone share sheet. A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded file somewhere safe. The PDF buttons remain available as secondary options.</p>
+    <h3>Share, back up, or print</h3>
+    <p class="disclaimer">Use <strong>Share PDF</strong> to create a real Frannie Log PDF and open the native iPhone share sheet. A backup contains Frannie’s profile, training progress, logs, and care information. Keep the downloaded backup somewhere safe.</p>
     <div class="actions">
-      <button class="primary" onclick="shareFrannieLog()">Share Frannie Log</button>
+      <button class="primary" onclick="shareFrannieLogPdf()">Share PDF</button>
       <button class="secondary" onclick="downloadBackup()">Save backup</button>
       <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore backup</button>
-      <button class="secondary" onclick="printFrannieLog('phone')">Phone-style PDF</button>
-      <button class="secondary" onclick="printFrannieLog('letter')">Full-page PDF</button>
+      <button class="secondary" onclick="printFrannieLog('letter')">Print</button>
       <input id="restoreFile" type="file" accept=".json,application/json" class="hidden" onchange="restoreBackup(event)">
     </div>
   </div>
@@ -189,6 +188,6 @@
 <div class="modal-fallback">The video is streamed from YouTube. If the uploader blocks embedded playback, <a id="youtubeFallback" target="_blank" rel="noopener">open the official video on YouTube</a>.</div>
 </div></div>
 
-<script src="app.js?v=5" defer></script>
+<script src="app.js?v=8" defer></script>
 <section id="printReport" class="print-only"></section></body>
 </html>

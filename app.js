@@ -190,38 +190,101 @@ async function restoreBackup(event){
   }catch(err){console.error("Restore failed",err);alert(err&&err.message?err.message:"That file could not be restored. Choose a Frannie backup JSON file.")}
   finally{input.value=""}
 }
-function buildFrannieLogText(){
-  const profile=state.profile||{};
-  const entries=allFrannieEntries();
-  const header=[
-    "Frannie Log",
-    `Frannie and her human, Mollie${profile.age?" · Age "+profile.age:""}${profile.size?" · "+profile.size:""}`
-  ];
-  const lines=entries.length
-    ? entries.map(x=>`${String(x.type).toUpperCase()}\n${x.title}\n${x.date||"No date"}${x.detail?`\n${x.detail}`:""}`)
-    : ["No entries yet."];
-  return [...header, "", ...lines].join("\n\n");
+function pdfSafeText(value){
+  return String(value??"")
+    .replace(/[‘’]/g,"'")
+    .replace(/[“”]/g,'"')
+    .replace(/[–—]/g,"-")
+    .replace(/…/g,"...")
+    .replace(/[^\x20-\x7E]/g,"?");
 }
-async function shareFrannieLog(){
-  const text=buildFrannieLogText();
-  if(navigator.share){
+function pdfEscape(value){return pdfSafeText(value).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)")}
+function wrapPdfText(value,maxChars=82){
+  const words=pdfSafeText(value).replace(/\s+/g," ").trim().split(" ").filter(Boolean),lines=[];
+  let line="";
+  words.forEach(word=>{
+    if(!line){line=word;return}
+    if((line+" "+word).length<=maxChars)line+=" "+word;
+    else{lines.push(line);line=word}
+  });
+  if(line)lines.push(line);
+  return lines.length?lines:[""];
+}
+function createFranniePdfBlob(){
+  const profile=state.profile||{},entries=allFrannieEntries();
+  const pageWidth=612,pageHeight=792,margin=48,lineHeight=15;
+  const pages=[];let commands=[],y=pageHeight-margin;
+  const addPage=()=>{if(commands.length)pages.push(commands.join("\n"));commands=[];y=pageHeight-margin};
+  const ensure=needed=>{if(y-needed<margin)addPage()};
+  const text=(value,size=10,bold=false,x=margin)=>{
+    commands.push(`BT /${bold?"F2":"F1"} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${pdfEscape(value)}) Tj ET`);
+    y-=lineHeight;
+  };
+  const wrapped=(value,size=10,bold=false,indent=0,maxChars=82)=>{
+    wrapPdfText(value,maxChars).forEach(line=>{ensure(lineHeight);text(line,size,bold,margin+indent)});
+  };
+  text("Frannie Log",22,true);y-=2;
+  wrapped(`Frannie and her human, Mollie${profile.age?" - Age "+profile.age:""}${profile.size?" - "+profile.size:""}`,9,false,0,96);
+  y-=10;
+  if(!entries.length)wrapped("No entries yet.",11,false);
+  entries.forEach(entry=>{
+    ensure(74);
+    text(String(entry.type).toUpperCase(),8,true);
+    wrapped(entry.title,12,true,0,66);
+    wrapped(entry.date||"No date",9,false,0,92);
+    if(entry.detail)wrapped(entry.detail,10,false,0,82);
+    y-=8;
+    commands.push(`0.82 G ${margin} ${y+4} m ${pageWidth-margin} ${y+4} l S 0 G`);
+  });
+  addPage();
+
+  const objects=[];
+  const pageIds=[],contentIds=[];
+  for(let i=0;i<pages.length;i++){pageIds.push(5+i*2);contentIds.push(6+i*2)}
+  objects[1]='<< /Type /Catalog /Pages 2 0 R >>';
+  objects[2]=`<< /Type /Pages /Kids [${pageIds.map(id=>id+' 0 R').join(' ')}] /Count ${pages.length} >>`;
+  objects[3]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+  objects[4]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
+  pages.forEach((stream,i)=>{
+    objects[pageIds[i]]=`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentIds[i]} 0 R >>`;
+    objects[contentIds[i]]=`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+  let pdf='%PDF-1.4\n';const offsets=[0];
+  for(let id=1;id<objects.length;id++){
+    offsets[id]=pdf.length;
+    pdf+=`${id} 0 obj\n${objects[id]}\nendobj\n`;
+  }
+  const xref=pdf.length;
+  pdf+=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for(let id=1;id<objects.length;id++)pdf+=String(offsets[id]).padStart(10,'0')+' 00000 n \n';
+  pdf+=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new Blob([pdf],{type:"application/pdf"});
+}
+async function shareFrannieLogPdf(){
+  const blob=createFranniePdfBlob();
+  const filename=`Frannie-Log-${todayISO()}.pdf`;
+  const file=new File([blob],filename,{type:"application/pdf",lastModified:Date.now()});
+  const canShareFiles=Boolean(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]})));
+  if(canShareFiles){
     try{
-      await navigator.share({title:"Frannie Log",text});
+      await navigator.share({title:"Frannie Log",files:[file]});
       return;
     }catch(err){
       if(err&&err.name==="AbortError")return;
-      console.warn("Share failed",err);
+      console.warn("PDF sharing failed",err);
     }
   }
-  alert("This device does not support the share sheet here, so the app will open the phone-style PDF instead.");
-  printFrannieLog("phone");
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  alert("The PDF was downloaded because this device could not open file sharing directly.");
 }
-function printFrannieLog(mode="phone"){
+function printFrannieLog(mode="letter"){
   const entries=allFrannieEntries(),profile=state.profile||{};
   const rows=entries.length?entries.map(x=>`<article><div class="type">${esc(x.type)}</div><h3>${esc(x.title)}</h3><div class="date">${esc(x.date||"No date")}</div>${x.detail?`<p>${esc(x.detail)}</p>`:""}</article>`).join(""):"<p>No entries yet.</p>";
   $("printReport").innerHTML=`<section class="print-card"><h1>Frannie Log</h1><p class="print-profile">Frannie and her human, Mollie${profile.age?" · Age "+esc(profile.age):""}${profile.size?" · "+esc(profile.size):""}</p>${rows}</section>`;
   document.documentElement.dataset.printMode=mode;
-  const cleanup=()=>{delete document.documentElement.dataset.printMode;window.removeEventListener("afterprint",cleanup)};window.addEventListener("afterprint",cleanup);setTimeout(()=>window.print(),100)
+  const cleanup=()=>{delete document.documentElement.dataset.printMode;window.removeEventListener("afterprint",cleanup)};window.addEventListener("afterprint",cleanup);void $("printReport").offsetHeight;window.print()
 }
 function initializeUI(){loadProfile();renderProblems();renderModules();renderCare();renderMainLog();if(!$("treatmentDate").value)$("treatmentDate").value=todayISO();if(!$("weightDate").value)$("weightDate").value=todayISO();if(!$("careNoteDate").value)$("careNoteDate").value=todayISO();if(!$("quickLogDate").value)$("quickLogDate").value=todayISO()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeVideo()});

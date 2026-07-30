@@ -248,11 +248,29 @@ async function restoreBackup(event){
 }
 function pdfSafeText(value){
   return String(value??"")
-    .replace(/[‘’]/g,"'")
-    .replace(/[“”]/g,'"')
-    .replace(/[–—]/g,"-")
+    .replace(/[‘’‚‛]/g,"'")
+    .replace(/[“”„‟]/g,'"')
+    .replace(/[–—−]/g,"-")
     .replace(/…/g,"...")
-    .replace(/[^\x20-\x7E]/g,"?");
+    .replace(/[•·]/g,"-")
+    .replace(/½/g,"1/2")
+    .replace(/¼/g,"1/4")
+    .replace(/¾/g,"3/4")
+    .replace(/⅓/g,"1/3")
+    .replace(/⅔/g,"2/3")
+    .replace(/⅛/g,"1/8")
+    .replace(/⅜/g,"3/8")
+    .replace(/⅝/g,"5/8")
+    .replace(/⅞/g,"7/8")
+    .replace(/×/g,"x")
+    .replace(/÷/g,"/")
+    .replace(/©/g,"(c)")
+    .replace(/®/g,"(R)")
+    .replace(/™/g,"TM")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^\x20-\x7E\n\r\t]/g,"")
+    .replace(/[\t\r\n]+/g," ");
 }
 function pdfEscape(value){return pdfSafeText(value).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)")}
 function wrapPdfText(value,maxChars=82){

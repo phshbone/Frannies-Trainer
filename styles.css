@@ -270,3 +270,26 @@ html.install-required .install-curtain{
   width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
   background:#929292;color:white;font-weight:950
 }
+
+/* v18 — unified secondary choice controls */
+.problem,
+.timeline-filter button,
+.rating button {
+  background:#fffaf7;
+  border:1px solid #8a6861;
+  color:#9b6674;
+  -webkit-tap-highlight-color:transparent;
+}
+.problem.active,
+.timeline-filter button.active,
+.rating button.active {
+  background:#7e4f5b;
+  border-color:#5f3c45;
+  color:#fff8f2;
+}
+.timeline-filter button:focus-visible,
+.rating button:focus-visible,
+.problem:focus-visible {
+  outline:3px solid rgba(197,141,155,.42);
+  outline-offset:2px;
+}

@@ -28,8 +28,8 @@ input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1px soli
 textarea{min-height:90px;resize:vertical}
 .profile{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .problem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
-.problem{border:1px solid var(--line);background:#fffaf7;border-radius:13px;padding:11px;text-align:left;font-weight:800;color:#56444a}
-.problem.active{background:#f1dce1;border-color:var(--pink);color:#603b45}
+.problem{border:1px solid #8a6861;background:#fffaf7;border-radius:13px;padding:11px;text-align:left;font-weight:800;color:#9b6674}
+.problem.active{background:#7e4f5b;border-color:#5f3c45;color:#fff8f2}
 .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
 .primary,.secondary,.danger,.ghost{border:0;border-radius:12px;padding:11px 14px;font-weight:900}
 .primary{background:var(--pink3);color:white}.primary:disabled{opacity:.45;cursor:not-allowed} .secondary{background:#ead8dc;color:#513b42}
